@@ -266,6 +266,33 @@ impl pallet_sudo::Config for Runtime {
 // 	type Event = Event;
 // }
 
+parameter_types! {
+	pub const CarbonAssetDeposit: Balance = 10;
+	pub const CarbonAssetAccountDeposit: Balance = 10;
+	pub const CarbonMetadataDepositBase: Balance = 10;
+	pub const CarbonMetadataDepositPerByte: Balance = 1;
+	pub const CarbonApprovalDeposit: Balance = 10;
+	pub const CarbonStringLimit: u32 = 50;
+}
+
+pub use pallet_carbon_assets;
+impl pallet_carbon_assets::Config for Runtime {
+	type Event = Event;
+	type Balance = u128;
+	type AssetId = u64;
+	type Currency = Balances;
+	type ForceOrigin = frame_system::EnsureRoot<AccountId>;
+	type AssetDeposit = CarbonAssetDeposit;
+	type AssetAccountDeposit = CarbonAssetAccountDeposit;
+	type MetadataDepositBase = CarbonMetadataDepositBase;
+	type MetadataDepositPerByte = CarbonMetadataDepositPerByte;
+	type ApprovalDeposit = CarbonApprovalDeposit;
+	type StringLimit = CarbonStringLimit;
+	type Freezer = ();
+	type Extra = ();
+	type WeightInfo = pallet_carbon_assets::weights::SubstrateWeight<Runtime>;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -283,6 +310,7 @@ construct_runtime!(
 		Sudo: pallet_sudo,
 		// Include the custom logic from the pallet-template in the runtime.
 		// TemplateModule: pallet_template,
+		CarbonAssets: pallet_carbon_assets,
 	}
 );
 
