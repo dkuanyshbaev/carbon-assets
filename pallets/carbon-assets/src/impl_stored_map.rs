@@ -19,14 +19,14 @@
 
 use super::*;
 
-impl<T: Config<I>, I: 'static> StoredMap<(T::AssetId, T::AccountId), T::Extra> for Pallet<T, I> {
-	fn get(id_who: &(T::AssetId, T::AccountId)) -> T::Extra {
+impl<T: Config<I>, I: 'static> StoredMap<(AssetId, T::AccountId), T::Extra> for Pallet<T, I> {
+	fn get(id_who: &(AssetId, T::AccountId)) -> T::Extra {
 		let &(id, ref who) = id_who;
 		Account::<T, I>::get(id, who).map(|a| a.extra).unwrap_or_default()
 	}
 
 	fn try_mutate_exists<R, E: From<DispatchError>>(
-		id_who: &(T::AssetId, T::AccountId),
+		id_who: &(AssetId, T::AccountId),
 		f: impl FnOnce(&mut Option<T::Extra>) -> Result<R, E>,
 	) -> Result<R, E> {
 		let &(id, ref who) = id_who;

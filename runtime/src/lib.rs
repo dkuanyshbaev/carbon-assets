@@ -267,11 +267,11 @@ impl pallet_sudo::Config for Runtime {
 // }
 
 parameter_types! {
-	pub const CarbonAssetDeposit: Balance = 10;
-	pub const CarbonAssetAccountDeposit: Balance = 10;
-	pub const CarbonMetadataDepositBase: Balance = 10;
-	pub const CarbonMetadataDepositPerByte: Balance = 1;
-	pub const CarbonApprovalDeposit: Balance = 10;
+	pub const CarbonAssetDeposit: Balance = 0;
+	pub const CarbonAssetAccountDeposit: Balance = 0;
+	pub const CarbonMetadataDepositBase: Balance = 0;
+	pub const CarbonMetadataDepositPerByte: Balance = 0;
+	pub const CarbonApprovalDeposit: Balance = 0;
 	pub const CarbonStringLimit: u32 = 50;
 }
 
@@ -279,7 +279,6 @@ pub use pallet_carbon_assets;
 impl pallet_carbon_assets::Config for Runtime {
 	type Event = Event;
 	type Balance = u128;
-	type AssetId = u64;
 	type Currency = Balances;
 	type ForceOrigin = frame_system::EnsureRoot<AccountId>;
 	type AssetDeposit = CarbonAssetDeposit;

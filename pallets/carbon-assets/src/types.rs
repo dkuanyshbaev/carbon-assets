@@ -231,7 +231,6 @@ pub enum ConversionError {
 // Type alias for `frame_system`'s account id.
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 // This pallet's asset id and balance type.
-type AssetIdOf<T, I> = <T as Config<I>>::AssetId;
 type AssetBalanceOf<T, I> = <T as Config<I>>::Balance;
 // Generic fungible balance type.
 type BalanceOf<F, T> = <F as fungible::Inspect<AccountIdOf<T>>>::Balance;
@@ -239,7 +238,7 @@ type BalanceOf<F, T> = <F as fungible::Inspect<AccountIdOf<T>>>::Balance;
 /// Converts a balance value into an asset balance based on the ratio between the fungible's
 /// minimum balance and the minimum asset balance.
 pub struct BalanceToAssetBalance<F, T, CON, I = ()>(PhantomData<(F, T, CON, I)>);
-impl<F, T, CON, I> BalanceConversion<BalanceOf<F, T>, AssetIdOf<T, I>, AssetBalanceOf<T, I>>
+impl<F, T, CON, I> BalanceConversion<BalanceOf<F, T>, AssetId, AssetBalanceOf<T, I>>
 	for BalanceToAssetBalance<F, T, CON, I>
 where
 	F: fungible::Inspect<AccountIdOf<T>>,
@@ -258,7 +257,7 @@ where
 	/// balance is zero.
 	fn to_asset_balance(
 		balance: BalanceOf<F, T>,
-		asset_id: AssetIdOf<T, I>,
+		asset_id: AssetId,
 	) -> Result<AssetBalanceOf<T, I>, ConversionError> {
 		let asset = Asset::<T, I>::get(asset_id).ok_or(ConversionError::AssetMissing)?;
 		// only sufficient assets have a min balance with reliable value

@@ -71,7 +71,7 @@ fn create_default_minted_asset<T: Config<I>, I: 'static>(
 }
 
 fn swap_is_sufficient<T: Config<I>, I: 'static>(s: &mut bool) {
-	Asset::<T, I>::mutate(&T::AssetId::default(), |maybe_a| {
+	Asset::<T, I>::mutate(&AssetId::default(), |maybe_a| {
 		if let Some(ref mut a) = maybe_a {
 			sp_std::mem::swap(s, &mut a.is_sufficient)
 		}
@@ -174,7 +174,7 @@ benchmarks_instance_pallet! {
 		add_consumers::<T, I>(caller.clone(), c);
 		add_sufficients::<T, I>(caller.clone(), s);
 		add_approvals::<T, I>(caller.clone(), a);
-		let witness = Asset::<T, I>::get(T::AssetId::default()).unwrap().destroy_witness();
+		let witness = Asset::<T, I>::get(AssetId::default()).unwrap().destroy_witness();
 	}: _(SystemOrigin::Signed(caller), Default::default(), witness)
 	verify {
 		assert_last_event::<T, I>(Event::Destroyed { asset_id: Default::default() }.into());

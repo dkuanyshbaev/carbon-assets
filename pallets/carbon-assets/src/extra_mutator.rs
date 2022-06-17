@@ -26,7 +26,7 @@ use super::*;
 /// dropped. Changes, even after committed, may be reverted to their original values with the
 /// `revert` function.
 pub struct ExtraMutator<T: Config<I>, I: 'static = ()> {
-	id: T::AssetId,
+	id: AssetId,
 	who: T::AccountId,
 	original: T::Extra,
 	pending: Option<T::Extra>,
@@ -59,7 +59,7 @@ impl<T: Config<I>, I: 'static> sp_std::ops::DerefMut for ExtraMutator<T, I> {
 
 impl<T: Config<I>, I: 'static> ExtraMutator<T, I> {
 	pub(super) fn maybe_new(
-		id: T::AssetId,
+		id: AssetId,
 		who: impl sp_std::borrow::Borrow<T::AccountId>,
 	) -> Option<ExtraMutator<T, I>> {
 		if let Some(a) = Account::<T, I>::get(id, who.borrow()) {
