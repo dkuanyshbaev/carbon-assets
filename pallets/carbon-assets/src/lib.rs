@@ -365,9 +365,15 @@ pub mod pallet {
 					name.clone().try_into().expect("asset name is too long");
 				let bounded_symbol: BoundedVec<u8, T::StringLimit> =
 					symbol.clone().try_into().expect("asset symbol is too long");
-
+				let bounded_url: BoundedVec<u8, T::StringLimit> =
+					"".as_bytes().to_vec().clone().try_into().expect("wrong url");
+				let bounded_data_ipfs: BoundedVec<u8, T::StringLimit> =
+					"".as_bytes().to_vec().clone().try_into().expect("wrong data_ipfs");
+		
 				let metadata = AssetMetadata {
 					deposit: Zero::zero(),
+					url: bounded_url,
+					data_ipfs: bounded_data_ipfs,
 					name: bounded_name,
 					symbol: bounded_symbol,
 					decimals: *decimals,
@@ -993,11 +999,18 @@ pub mod pallet {
 			let bounded_symbol: BoundedVec<u8, T::StringLimit> =
 				symbol.clone().try_into().map_err(|_| Error::<T, I>::BadMetadata)?;
 
+			let bounded_url: BoundedVec<u8, T::StringLimit> =
+				"".as_bytes().to_vec().clone().try_into().map_err(|_| Error::<T, I>::BadMetadata)?;
+			let bounded_data_ipfs: BoundedVec<u8, T::StringLimit> =
+				"".as_bytes().to_vec().clone().try_into().map_err(|_| Error::<T, I>::BadMetadata)?;
+
 			ensure!(Asset::<T, I>::contains_key(id), Error::<T, I>::Unknown);
 			Metadata::<T, I>::try_mutate_exists(id, |metadata| {
 				let deposit = metadata.take().map_or(Zero::zero(), |m| m.deposit);
 				*metadata = Some(AssetMetadata {
 					deposit,
+					url: bounded_url,
+					data_ipfs: bounded_data_ipfs,
 					name: bounded_name,
 					symbol: bounded_symbol,
 					decimals,

@@ -129,6 +129,10 @@ pub struct AssetMetadata<DepositBalance, BoundedString> {
 	///
 	/// This pays for the data stored in this struct.
 	pub(super) deposit: DepositBalance,
+	/// Url for IPFS
+	pub(super) url: BoundedString,
+	/// Hash link for project data and serial number on IPFS storage
+	pub(super) data_ipfs: BoundedString,
 	/// The user friendly name of this asset. Limited in length by `StringLimit`.
 	pub(super) name: BoundedString,
 	/// The ticker symbol for this asset. Limited in length by `StringLimit`.
