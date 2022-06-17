@@ -1,6 +1,6 @@
 use node_template_runtime::{
 	AccountId, AuraConfig, BalancesConfig, GenesisConfig, GrandpaConfig, Signature, SudoConfig,
-	SystemConfig, WASM_BINARY, CarbonAssetsConfig
+	SystemConfig, WASM_BINARY, CarbonAssetsConfig, Balance
 };
 use sc_service::ChainType;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -59,6 +59,9 @@ pub fn development_config() -> Result<ChainSpec, String> {
 					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
 				],
+				Some(get_account_id_from_seed::<sr25519::Public>("Alice")),
+				(1, get_account_id_from_seed::<sr25519::Public>("Alice"), true, 1),
+				(1, "EVERUSD".as_bytes().to_vec(), "EVERUSD".as_bytes().to_vec(), 9),
 				true,
 			)
 		},
@@ -107,6 +110,9 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 				],
+				Some(get_account_id_from_seed::<sr25519::Public>("Alice")),
+				(1, get_account_id_from_seed::<sr25519::Public>("Alice"), true, 1),
+				(1, "EVERUSD".as_bytes().to_vec(), "EVERUSD".as_bytes().to_vec(), 9),
 				true,
 			)
 		},
@@ -130,6 +136,9 @@ fn testnet_genesis(
 	initial_authorities: Vec<(AuraId, GrandpaId)>,
 	root_key: AccountId,
 	endowed_accounts: Vec<AccountId>,
+	custodian: Option<AccountId>,
+	everusd_asset: (u64, AccountId, bool, Balance),
+	everusd_metadata: (u64, Vec<u8>, Vec<u8>, u8),
 	_enable_println: bool,
 ) -> GenesisConfig {
 	GenesisConfig {
@@ -153,8 +162,9 @@ fn testnet_genesis(
 		},
 		transaction_payment: Default::default(),
 		carbon_assets: CarbonAssetsConfig {
-			assets: Vec::new(),
-			metadata: Vec::new(),
+			custodian,
+			assets: vec![everusd_asset],
+			metadata: vec![everusd_metadata],
 			accounts: Vec::new(),
 		}
 	}

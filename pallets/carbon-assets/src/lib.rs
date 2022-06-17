@@ -167,7 +167,7 @@ pub use weights::WeightInfo;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::pallet_prelude::*;
+	use frame_support::pallet_prelude::{*, StorageValue};
 	use frame_system::pallet_prelude::*;
 
 	#[pallet::pallet]
@@ -296,8 +296,17 @@ pub mod pallet {
 		ConstU32<300_000>,
 	>;
 
+	#[pallet::storage]
+	/// Evercity custodian - only custodian can mint or burn assets
+	pub(super) type Custodian<T: Config<I>, I: 'static = ()> = StorageValue<
+		_,
+		T::AccountId
+	>;
+
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config<I>, I: 'static = ()> {
+		/// Genesis custodian: custodian_address
+		pub custodian: Option<T::AccountId>,
 		/// Genesis assets: id, owner, is_sufficient, min_balance
 		pub assets: Vec<(T::AssetId, T::AccountId, bool, T::Balance)>,
 		/// Genesis metadata: id, name, symbol, decimals
@@ -310,6 +319,7 @@ pub mod pallet {
 	impl<T: Config<I>, I: 'static> Default for GenesisConfig<T, I> {
 		fn default() -> Self {
 			Self {
+				custodian: None,
 				assets: Default::default(),
 				metadata: Default::default(),
 				accounts: Default::default(),
@@ -317,9 +327,14 @@ pub mod pallet {
 		}
 	}
 
+
 	#[pallet::genesis_build]
 	impl<T: Config<I>, I: 'static> GenesisBuild<T, I> for GenesisConfig<T, I> {
 		fn build(&self) {
+			if let Some(custodian_account) = &self.custodian {
+				Custodian::<T, I>::put(custodian_account);
+			}
+
 			for (id, owner, is_sufficient, min_balance) in &self.assets {
 				assert!(!Asset::<T, I>::contains_key(id), "Asset id already in use");
 				assert!(!min_balance.is_zero(), "Min balance should not be zero");
