@@ -288,6 +288,17 @@ pub mod pallet {
 	>;
 
 	#[pallet::storage]
+	/// Burn certificates for an AccountId.
+	pub(super) type BurnCertificate<T: Config<I>, I: 'static = ()> = StorageDoubleMap<
+		_,
+		Blake2_128Concat,
+		T::AccountId,
+		Blake2_128Concat,
+		AssetId,
+		T::Balance
+	>;
+
+	#[pallet::storage]
 	/// Evercity custodian - only custodian can mint or burn assets
 	pub(super) type Custodian<T: Config<I>, I: 'static = ()> = StorageValue<
 		_,
@@ -475,6 +486,8 @@ pub mod pallet {
 		CustodianSet { custodian: T::AccountId},
 		/// Metadata has been updated with `url` and `data_ipfs`.
 		MetadataUpdated { asset_id: AssetId, url: Vec<u8>, data_ipfs: Vec<u8>},
+		/// Carbon credites burned by `account`.
+		CarbonCreditsBurned { account: T::AccountId, asset_id: AssetId, amount: T::Balance },
 	}
 
 	#[pallet::error]
@@ -643,8 +656,6 @@ pub mod pallet {
 			Self::do_force_create(id, owner, is_sufficient, min_balance)
 		}
 
-		// pub fn update_asset() {}
-
 		/// Destroy a class of fungible assets.
 		///
 		/// The origin must conform to `ForceOrigin` or must be Signed and the sender must be the
@@ -711,9 +722,11 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Burn of carbon credits assets by custodian. 
 		/// Reduce the balance of `who` by as much as possible up to `amount` assets of `id`.
+		/// Store information about the burned carbon asset in `BurnCertificate`.
 		///
-		/// Origin must be Signed and the sender should be the Manager of the asset `id`.
+		/// Origin must be Signed and the sender should be the Custodian.
 		///
 		/// Bails with `NoAccount` if the `who` is already dead.
 		///
@@ -723,6 +736,8 @@ pub mod pallet {
 		///
 		/// Emits `Burned` with the actual amount burned. If this takes the balance to below the
 		/// minimum for the asset, then the amount burned is increased to take it to zero.
+		/// 
+		/// Emits `CarbonCreditsBurned`.
 		///
 		/// Weight: `O(1)`
 		/// Modes: Post-existence of `who`; Pre & post Zombie-status of `who`.
@@ -738,6 +753,63 @@ pub mod pallet {
 
 			let f = DebitFlags { keep_alive: false, best_effort: true };
 			let _ = Self::do_burn(id, &who, amount, Some(origin), f)?;
+
+			BurnCertificate::<T,I>::mutate(who.clone(), id, |burned| {
+				if let Some(b) = burned {
+					let result = b.saturating_add(amount);
+					*burned = Some(result);
+				} else {
+					*burned = Some(amount);
+				}
+			});
+			Self::deposit_event(Event::CarbonCreditsBurned {account: who, asset_id: id, amount: amount});
+			Ok(())
+		}
+
+		/// Burn of carbon credits assets by owner. 
+		/// Reduce the balance of `who` by as much as possible up to `amount` assets of `id`.
+		/// Store information about the burned carbon asset in `BurnCertificate`.
+		///
+		/// Origin must be Signed and the sender should have enough amount of asset.
+		///
+		/// Bails with `NoAccount` if the `who` is already dead.
+		///
+		/// - `id`: The identifier of the asset to have some amount burned.
+		/// - `amount`: The maximum amount by which `who`'s balance should be reduced.
+		///
+		/// Emits `Burned` with the actual amount burned. If this takes the balance to below the
+		/// minimum for the asset, then the amount burned is increased to take it to zero.
+		/// 
+		/// Emits `CarbonCreditsBurned`.
+		///
+		/// Weight: `O(1)`
+		/// Modes: Post-existence of `who`; Pre & post Zombie-status of `who`.
+		#[pallet::weight(10_000_000 + T::DbWeight::get().reads_writes(3,3))]
+		pub fn self_burn(
+			origin: OriginFor<T>,
+			#[pallet::compact] id: AssetId,
+			#[pallet::compact] amount: T::Balance,
+		) -> DispatchResult {
+			let caller = ensure_signed(origin)?;
+
+			let f = DebitFlags { keep_alive: false, best_effort: true };
+			let actual = Self::decrease_balance(id, &caller, amount, f, |actual, details| {
+				debug_assert!(details.supply >= actual, "checked in prep; qed");
+				details.supply = details.supply.saturating_sub(actual);
+
+				Ok(())
+			})?;
+			Self::deposit_event(Event::Burned { asset_id: id, owner: caller.clone(), balance: actual });
+		
+			BurnCertificate::<T,I>::mutate(caller.clone(), id, |burned| {
+				if let Some(b) = burned {
+					let result = b.saturating_add(amount);
+					*burned = Some(result);
+				} else {
+					*burned = Some(amount);
+				}
+			});
+			Self::deposit_event(Event::CarbonCreditsBurned {account: caller, asset_id: id, amount: amount});
 			Ok(())
 		}
 
@@ -1052,6 +1124,11 @@ pub mod pallet {
 					symbol,
 					decimals,
 					is_frozen,
+				});
+				Self::deposit_event(Event::MetadataUpdated {
+					asset_id: id,
+					url,
+					data_ipfs,
 				});
 				Ok(())
 			})

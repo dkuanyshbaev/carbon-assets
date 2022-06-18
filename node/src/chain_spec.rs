@@ -58,6 +58,7 @@ pub fn development_config() -> Result<ChainSpec, String> {
 					get_account_id_from_seed::<sr25519::Public>("Bob"),
 					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+					get_account_id_from_seed::<sr25519::Public>("Eve"),
 				],
 				Some(get_account_id_from_seed::<sr25519::Public>("Alice")),
 				(1, get_account_id_from_seed::<sr25519::Public>("Alice"), true, 1),
