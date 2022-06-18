@@ -419,7 +419,7 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config<I>, I: 'static = ()> {
 		/// Some asset class was created.
-		Created { asset_id: AssetId, creator: T::AccountId, owner: T::AccountId },
+		Created { asset_id: AssetId, creator: T::AccountId },
 		/// Some assets were issued.
 		Issued { asset_id: AssetId, owner: T::AccountId, total_supply: T::Balance },
 		/// Some assets were transferred.
@@ -562,9 +562,10 @@ pub mod pallet {
 		/// Funds of sender are reserved by `AssetDeposit`.
 		/// 
 		/// Admin of asset are custodian. Fails if no custodian are set.
+		/// Set asset metadata: generated `name` and `symbol`, decimals to 9.
 		/// 
 		/// Emits `Created` event when successful.
-		/// Emits `MetadataSet`.
+		/// Emits `MetadataSet` with generated `name` and `symbol`.
 		///
 		#[pallet::weight(T::WeightInfo::create())]
 		pub fn create(
@@ -596,11 +597,10 @@ pub mod pallet {
 					is_frozen: false,
 				},
 			);
-			Self::deposit_event(Event::Created { asset_id: id, creator: owner.clone(), owner: admin });
+			Self::deposit_event(Event::Created { asset_id: id, creator: owner.clone() });
 			let name = Self::construct_carbon_asset_name(&owner);
 			let symbol = Self::construct_carbon_asset_symbol(&owner);
-			Self::do_set_metadata(id, &owner, name, symbol, 0)
-
+			Self::do_set_metadata(id, &owner, name, symbol, 9)
 		}
 
 		/// Set project data to metadata of an asset.

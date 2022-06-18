@@ -3967,12 +3967,13 @@ dependencies = [
 
 [[package]]
 name = "pallet-carbon-assets"
-version = "4.0.0-dev"
+version = "0.1.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "pallet-balances",
+ "pallet-randomness-collective-flip",
  "parity-scale-codec",
  "scale-info",
  "sp-core",

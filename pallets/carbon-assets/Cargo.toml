@@ -1,12 +1,12 @@
 [package]
 name = "pallet-carbon-assets"
-version = "4.0.0-dev"
-authors = ["Parity Technologies <admin@parity.io>"]
+version = "0.1.0"
+authors = ["Veronika Starikova nianemis@gmail.com"]
 edition = "2021"
 license = "Apache-2.0"
-homepage = "https://substrate.io"
-repository = "https://github.com/paritytech/substrate/"
-description = "FRAME asset management pallet"
+homepage = "https://evercity.io"
+repository = "https://github.com/EvercityEcosystem/carbon-assets.git"
+description = "Pallet for evercity carbon credits (based on FRAME asset management pallet)"
 readme = "README.md"
 
 [package.metadata.docs.rs]
@@ -29,6 +29,7 @@ sp-core = { default-features = false, git = "https://github.com/paritytech/subst
 sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.23" }
 sp-io = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.23" }
 pallet-balances = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.23" }
+pallet-randomness-collective-flip = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.23" }
 
 [features]
 default = ["std"]
