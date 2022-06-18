@@ -473,6 +473,8 @@ pub mod pallet {
 		AssetStatusChanged { asset_id: AssetId },
 		/// New custodian has been set by the `Force` origin.
 		CustodianSet { custodian: T::AccountId},
+		/// Metadata has been updated with `url` and `data_ipfs`.
+		MetadataUpdated { asset_id: AssetId, url: Vec<u8>, data_ipfs: Vec<u8>},
 	}
 
 	#[pallet::error]
@@ -511,6 +513,8 @@ pub mod pallet {
 		WouldBurn,
 		/// Operation can not be done, custodian need to be set.
 		NoCustodian,
+		/// Metadata for the asset does not exist.
+		NoMetadata,
 	}
 
 	#[pallet::call]
@@ -536,7 +540,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Issue a new class of fungible assets from a public origin.
+		/// Issue a new class of fungible carbon assets from a public origin.
 		///
 		/// This new asset class has no assets initially and its owner is the origin.
 		///
@@ -549,7 +553,6 @@ pub mod pallet {
 		/// Emits `Created` event when successful.
 		/// Emits `MetadataSet`.
 		///
-		/// Weight: `O(1)`
 		#[pallet::weight(T::WeightInfo::create())]
 		pub fn create(
 			origin: OriginFor<T>,
@@ -585,6 +588,27 @@ pub mod pallet {
 			let symbol = Self::construct_carbon_asset_symbol(&owner);
 			Self::do_set_metadata(id, &owner, name, symbol, 0)
 
+		}
+
+		/// Set project data to metadata of an asset.
+		/// 
+		/// Origin must be Signed and the sender should be the Owner of the asset `id`.
+		/// 
+		/// - `id`: The identifier of the asset to update.
+		/// - `url`: The url.
+		/// - `data_ipfs`: The ipfs data link.
+		/// 
+		/// Emits `MetadataUpdated`.
+		/// 
+		#[pallet::weight(10_000_000 + T::DbWeight::get().reads_writes(1,1))]
+		pub fn set_project_data(
+			origin: OriginFor<T>,
+			id: AssetId,
+			url: Vec<u8>,
+			data_ipfs: Vec<u8>,
+		) -> DispatchResult {
+			let caller = ensure_signed(origin)?;
+			Self::update_metadata(id, &caller, url, data_ipfs)
 		}
 
 		/// Issue a new class of fungible assets from a privileged origin.

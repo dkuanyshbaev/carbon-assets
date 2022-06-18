@@ -877,6 +877,57 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		})
 	}
 
+	/// Update metadata with project ipfs info
+	pub(super) fn update_metadata(
+		id: AssetId,
+		from: &T::AccountId,
+		url: Vec<u8>,
+		data_ipfs: Vec<u8>,
+	) -> DispatchResult {
+		let bounded_url: BoundedVec<u8, T::StringLimit> =
+			url.clone().try_into().map_err(|_| Error::<T, I>::BadMetadata)?;
+		let bounded_data_ipfs: BoundedVec<u8, T::StringLimit> =
+			data_ipfs.clone().try_into().map_err(|_| Error::<T, I>::BadMetadata)?;
+
+		let d = Asset::<T, I>::get(id).ok_or(Error::<T, I>::Unknown)?;
+		ensure!(from == &d.owner, Error::<T, I>::NoPermission);
+
+		Metadata::<T, I>::try_mutate_exists(id, |metadata| {
+			ensure!(metadata.is_some(), Error::<T, I>::NoMetadata);
+			ensure!(metadata.as_ref().map_or(true, |m| !m.is_frozen), Error::<T, I>::NoPermission);
+
+			let old_deposit = metadata.take().map_or(Zero::zero(), |m| m.deposit);
+			let new_deposit = T::MetadataDepositPerByte::get()
+				.saturating_mul(((url.len() + data_ipfs.len()) as u32).into())
+				.saturating_add(T::MetadataDepositBase::get());
+
+			if new_deposit > old_deposit {
+				T::Currency::reserve(from, new_deposit - old_deposit)?;
+			} else {
+				T::Currency::unreserve(from, old_deposit - new_deposit);
+			}
+
+			if let Some(meta) = metadata {
+				*metadata = Some(AssetMetadata {
+						deposit: new_deposit,
+						url: bounded_url,
+						data_ipfs: bounded_data_ipfs,
+						name: meta.name.clone(),
+						symbol: meta.symbol.clone(),
+						decimals: meta.decimals,
+						is_frozen: false,
+					});
+			}
+
+			Self::deposit_event(Event::MetadataUpdated {
+				asset_id: id,
+				url,
+				data_ipfs,
+			});
+			Ok(())
+		})	
+	}
+
 	pub fn construct_carbon_asset_name(account: &T::AccountId) -> Vec<u8> {
         let evercity_prefix = "EVERCITY-CO2-".as_bytes().to_vec();
 		let random_id = Self::get_random_id(account);
@@ -891,7 +942,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
 	pub fn get_random_id(account: &T::AccountId) -> Vec<u8> {
 		let seed = (account, <frame_system::Pallet<T>>::extrinsic_index()).encode();
-		let (rand, block) = T::Randomness::random(&seed);
+		let (rand, _block) = T::Randomness::random(&seed);
 		// let rand16: [u8; 16] = codec::Encode::using_encoded(&rand, sp_io::hashing::blake2_128);
 		
 		rand.as_ref().to_vec()
