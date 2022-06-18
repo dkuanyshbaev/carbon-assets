@@ -230,6 +230,9 @@ pub mod pallet {
 
 		/// Weight information for extrinsics in this pallet.
 		type WeightInfo: WeightInfo;
+
+		/// Randomness for asssets name generation
+        type Randomness: frame_support::traits::Randomness<Self::Hash, Self::BlockNumber>;
 	}
 
 	#[pallet::storage]
@@ -578,8 +581,8 @@ pub mod pallet {
 				},
 			);
 			Self::deposit_event(Event::Created { asset_id: id, creator: owner.clone(), owner: admin });
-			let name = "sds".as_bytes().to_vec();
-			let symbol = "w".as_bytes().to_vec();
+			let name = Self::construct_carbon_asset_name(&owner);
+			let symbol = Self::construct_carbon_asset_symbol(&owner);
 			Self::do_set_metadata(id, &owner, name, symbol, 0)
 
 		}
@@ -988,6 +991,8 @@ pub mod pallet {
 			#[pallet::compact] id: AssetId,
 			name: Vec<u8>,
 			symbol: Vec<u8>,
+			url: Vec<u8>,
+			data_ipfs: Vec<u8>,
 			decimals: u8,
 			is_frozen: bool,
 		) -> DispatchResult {
@@ -1000,9 +1005,9 @@ pub mod pallet {
 				symbol.clone().try_into().map_err(|_| Error::<T, I>::BadMetadata)?;
 
 			let bounded_url: BoundedVec<u8, T::StringLimit> =
-				"".as_bytes().to_vec().clone().try_into().map_err(|_| Error::<T, I>::BadMetadata)?;
+				url.clone().try_into().map_err(|_| Error::<T, I>::BadMetadata)?;
 			let bounded_data_ipfs: BoundedVec<u8, T::StringLimit> =
-				"".as_bytes().to_vec().clone().try_into().map_err(|_| Error::<T, I>::BadMetadata)?;
+				data_ipfs.clone().try_into().map_err(|_| Error::<T, I>::BadMetadata)?;
 
 			ensure!(Asset::<T, I>::contains_key(id), Error::<T, I>::Unknown);
 			Metadata::<T, I>::try_mutate_exists(id, |metadata| {

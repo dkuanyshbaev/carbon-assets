@@ -18,7 +18,8 @@
 //! Functions for the Assets pallet.
 
 use super::*;
-use frame_support::{traits::Get, BoundedVec};
+use frame_support::{traits::{Get, Randomness}, BoundedVec};
+use codec::Encode;
 
 #[must_use]
 pub(super) enum DeadConsequence {
@@ -874,5 +875,25 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 			});
 			Ok(())
 		})
+	}
+
+	pub fn construct_carbon_asset_name(account: &T::AccountId) -> Vec<u8> {
+        let evercity_prefix = "EVERCITY-CO2-".as_bytes().to_vec();
+		let random_id = Self::get_random_id(account);
+		[evercity_prefix, random_id].concat()
+    }
+
+    pub fn construct_carbon_asset_symbol(account: &T::AccountId) -> Vec<u8> {
+        let evercity_prefix = "EVR-CO2-".as_bytes().to_vec();
+		let random_id = Self::get_random_id(account);
+		[evercity_prefix, random_id].concat()
+    }
+
+	pub fn get_random_id(account: &T::AccountId) -> Vec<u8> {
+		let seed = (account, <frame_system::Pallet<T>>::extrinsic_index()).encode();
+		let (rand, block) = T::Randomness::random(&seed);
+		// let rand16: [u8; 16] = codec::Encode::using_encoded(&rand, sp_io::hashing::blake2_128);
+		
+		rand.as_ref().to_vec()
 	}
 }

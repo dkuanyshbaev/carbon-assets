@@ -290,6 +290,7 @@ impl pallet_carbon_assets::Config for Runtime {
 	type Freezer = ();
 	type Extra = ();
 	type WeightInfo = pallet_carbon_assets::weights::SubstrateWeight<Runtime>;
+	type Randomness = RandomnessCollectiveFlip;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
