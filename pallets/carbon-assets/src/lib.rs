@@ -529,6 +529,8 @@ pub mod pallet {
 		NoCustodian,
 		/// Metadata for the asset does not exist.
 		NoMetadata,
+		/// The account doesn't have needed balance.
+		UnsufficientBalance,
 	}
 
 	#[pallet::call]
@@ -752,7 +754,7 @@ pub mod pallet {
 			let origin = ensure_signed(origin)?;
 			let who = T::Lookup::lookup(who)?;
 
-			let f = DebitFlags { keep_alive: false, best_effort: true };
+			let f = DebitFlags { keep_alive: false, best_effort: false };
 			let _ = Self::do_burn(id, &who, amount, Some(origin), f)?;
 
 			BurnCertificate::<T,I>::mutate(who.clone(), id, |burned| {
@@ -793,9 +795,9 @@ pub mod pallet {
 		) -> DispatchResult {
 			let caller = ensure_signed(origin)?;
 
-			let f = DebitFlags { keep_alive: false, best_effort: true };
+			let f = DebitFlags { keep_alive: false, best_effort: false };
 			let actual = Self::decrease_balance(id, &caller, amount, f, |actual, details| {
-				debug_assert!(details.supply >= actual, "checked in prep; qed");
+				// ensure!(details.supply >= actual, Error::<T, I>::UnsufficientBalance);
 				details.supply = details.supply.saturating_sub(actual);
 
 				Ok(())

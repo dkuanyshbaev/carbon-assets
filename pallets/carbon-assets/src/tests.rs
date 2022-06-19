@@ -448,7 +448,7 @@ fn querying_total_supply_should_work() {
 		assert_eq!(Assets::balance(0, 1), 50);
 		assert_eq!(Assets::balance(0, 2), 19);
 		assert_eq!(Assets::balance(0, 3), 31);
-		assert_ok!(Assets::burn(Origin::signed(1), 0, 3, u64::MAX));
+		assert_ok!(Assets::burn(Origin::signed(1), 0, 3, 31));
 		assert_eq!(Assets::total_supply(0), 69);
 	});
 }
@@ -592,7 +592,7 @@ fn transferring_amount_more_than_available_balance_should_not_work() {
 		assert_ok!(Assets::transfer(Origin::signed(1), 0, 2, 50));
 		assert_eq!(Assets::balance(0, 1), 50);
 		assert_eq!(Assets::balance(0, 2), 50);
-		assert_ok!(Assets::burn(Origin::signed(1), 0, 1, u64::MAX));
+		assert_ok!(Assets::burn(Origin::signed(1), 0, 1, 50));
 		assert_eq!(Assets::balance(0, 1), 0);
 		assert_noop!(Assets::transfer(Origin::signed(1), 0, 1, 50), Error::<Test>::NoAccount);
 		assert_noop!(Assets::transfer(Origin::signed(2), 0, 1, 51), Error::<Test>::BalanceLow);
@@ -618,17 +618,6 @@ fn transferring_more_units_than_total_supply_should_not_work() {
 		assert_ok!(Assets::mint(Origin::signed(1), 0, 1, 100));
 		assert_eq!(Assets::balance(0, 1), 100);
 		assert_noop!(Assets::transfer(Origin::signed(1), 0, 2, 101), Error::<Test>::BalanceLow);
-	});
-}
-
-#[test]
-fn burning_asset_balance_with_positive_balance_should_work() {
-	new_test_ext().execute_with(|| {
-		assert_ok!(Assets::force_create(Origin::root(), 0, 1, true, 1));
-		assert_ok!(Assets::mint(Origin::signed(1), 0, 1, 100));
-		assert_eq!(Assets::balance(0, 1), 100);
-		assert_ok!(Assets::burn(Origin::signed(1), 0, 1, u64::MAX));
-		assert_eq!(Assets::balance(0, 1), 0);
 	});
 }
 
@@ -922,5 +911,218 @@ fn transfer_large_asset() {
 		assert_ok!(Assets::force_create(Origin::root(), 0, 1, true, 1));
 		assert_ok!(Assets::mint(Origin::signed(1), 0, 1, amount));
 		assert_ok!(Assets::transfer(Origin::signed(1), 0, 2, amount - 1));
+	})
+}
+
+//Carbon assets flow tests
+
+#[test]
+fn create_asset_with_generated_name() {
+	new_test_ext().execute_with(|| {
+		let user = 4;
+		Balances::make_free_balance_be(&user, 1000);
+		assert_ok!(Assets::create(Origin::signed(user)));
+		let id = Assets::get_last_id();
+
+		let metadata = Metadata::<Test>::get(id);
+		assert!(metadata.name.len() > 0);
+		assert!(metadata.symbol.len() > 0);
+	})
+}
+
+#[test]
+fn create_asset_ensure_user_cannot_mint() {
+	new_test_ext().execute_with(|| {
+		let user = 4;
+		Balances::make_free_balance_be(&user, 1000);
+		assert_ok!(Assets::create(Origin::signed(user)));
+		let id = Assets::get_last_id();
+		
+		assert_noop!(Assets::mint(Origin::signed(user), id, user, 500), 
+			Error::<Test>::NoPermission);
+	})
+}
+
+#[test]
+fn set_project_data_by_user() {
+	new_test_ext().execute_with(|| {
+		let user = 4;
+		Balances::make_free_balance_be(&user, 1000);
+		assert_ok!(Assets::create(Origin::signed(user)));
+		let id = Assets::get_last_id();
+		
+		assert_ok!(Assets::set_project_data(
+			Origin::signed(user), id, vec!['h' as u8,'t' as u8,'t'  as u8 ,'p' as u8],
+			 vec!['4' as u8,'h' as u8,'6' as u8,'g' as u8]));
+		let metadata = Metadata::<Test>::get(id);
+		assert!(metadata.name.len() > 0);
+		assert!(metadata.symbol.len() > 0);
+		assert!(metadata.url.len() == 4);
+		assert!(metadata.data_ipfs.len() == 4);
+	})
+}
+
+#[test]
+fn set_project_data_by_custodian() {
+	new_test_ext().execute_with(|| {
+		let user = 4;
+		Balances::make_free_balance_be(&user, 1000);
+		assert_ok!(Assets::create(Origin::signed(user)));
+		let id = Assets::get_last_id();
+		
+		assert_ok!(Assets::set_project_data(
+			Origin::signed(CUSTODIAN), id, vec!['h' as u8,'t' as u8,'t'  as u8 ,'p' as u8],
+			 vec!['4' as u8,'h' as u8,'6' as u8,'g' as u8]));
+		let metadata = Metadata::<Test>::get(id);
+		assert!(metadata.name.len() > 0);
+		assert!(metadata.symbol.len() > 0);
+		assert!(metadata.url.len() == 4);
+		assert!(metadata.data_ipfs.len() == 4);
+	})
+}
+
+#[test]
+fn set_project_data_second_time() {
+	new_test_ext().execute_with(|| {
+		let user = 4;
+		Balances::make_free_balance_be(&user, 1000);
+		assert_ok!(Assets::create(Origin::signed(user)));
+		let id = Assets::get_last_id();
+		
+		assert_ok!(Assets::set_project_data(
+			Origin::signed(user), id, vec!['h' as u8,'t' as u8,'t'  as u8 ,'p' as u8],
+			 vec!['4' as u8,'h' as u8,'6' as u8,'g' as u8]));
+		let metadata = Metadata::<Test>::get(id);
+		assert!(metadata.name.len() > 0);
+		assert!(metadata.symbol.len() > 0);
+		assert!(metadata.url.len() == 4);
+		assert!(metadata.data_ipfs.len() == 4);
+
+		assert_ok!(Assets::set_project_data(
+			Origin::signed(user), id, vec!['h' as u8,'t' as u8,'t'  as u8 ,'p' as u8],
+			 vec!['4' as u8,'h' as u8,'6' as u8,'g' as u8, 'f' as u8]));
+		let metadata = Metadata::<Test>::get(id);
+		assert!(metadata.name.len() > 0);
+		assert!(metadata.symbol.len() > 0);
+		assert!(metadata.url.len() == 4);
+		assert!(metadata.data_ipfs.len() == 5);
+	})
+}
+
+#[test]
+fn custodian_mint() {
+	new_test_ext().execute_with(|| {
+		let user = 4;
+		Balances::make_free_balance_be(&user, 1000);
+		assert_ok!(Assets::create(Origin::signed(user)));
+		let id = Assets::get_last_id();
+		
+		assert_ok!(Assets::set_project_data(
+			Origin::signed(user), id, vec!['h' as u8,'t' as u8,'t'  as u8 ,'p' as u8],
+			 vec!['4' as u8,'h' as u8,'6' as u8,'g' as u8]));
+			
+		assert_ok!(Assets::mint(Origin::signed(CUSTODIAN), id, user, 500));
+		assert_eq!(500, Assets::balance(id, user));
+	})
+}
+
+#[test]
+fn custodian_burn() {
+	new_test_ext().execute_with(|| {
+		let user = 4;
+		Balances::make_free_balance_be(&user, 1000);
+		assert_ok!(Assets::create(Origin::signed(user)));
+		let id = Assets::get_last_id();
+		
+		assert_ok!(Assets::set_project_data(
+			Origin::signed(user), id, vec!['h' as u8,'t' as u8,'t'  as u8 ,'p' as u8],
+			 vec!['4' as u8,'h' as u8,'6' as u8,'g' as u8]));
+			
+		assert_ok!(Assets::mint(Origin::signed(CUSTODIAN), id, user, 500));
+		assert_eq!(500, Assets::balance(id, user));
+
+		assert_ok!(Assets::burn(Origin::signed(CUSTODIAN), id, user, 100));
+		assert_eq!(400, Assets::balance(id, user));
+		assert_eq!(Some(100), BurnCertificate::<Test>::get(user, id));
+	})
+}
+
+#[test]
+fn user_self_burn() {
+	new_test_ext().execute_with(|| {
+		let user = 4;
+		Balances::make_free_balance_be(&user, 1000);
+		assert_ok!(Assets::create(Origin::signed(user)));
+		let id = Assets::get_last_id();
+		
+		assert_ok!(Assets::set_project_data(
+			Origin::signed(user), id, vec!['h' as u8,'t' as u8,'t'  as u8 ,'p' as u8],
+			 vec!['4' as u8,'h' as u8,'6' as u8,'g' as u8]));
+			
+		assert_ok!(Assets::mint(Origin::signed(CUSTODIAN), id, user, 500));
+		assert_eq!(500, Assets::balance(id, user));
+
+		assert_ok!(Assets::self_burn(Origin::signed(user), id, 100));
+		assert_eq!(400, Assets::balance(id, user));
+		assert_eq!(Some(100), BurnCertificate::<Test>::get(user, id));
+
+		// burn second time
+		assert_ok!(Assets::self_burn(Origin::signed(user), id, 100));
+		assert_eq!(300, Assets::balance(id, user));
+		assert_eq!(Some(200), BurnCertificate::<Test>::get(user, id));
+	})
+}
+
+#[test]
+fn user_cannot_self_burn_more() {
+	new_test_ext().execute_with(|| {
+		let user = 4;
+		Balances::make_free_balance_be(&user, 1000);
+		assert_ok!(Assets::create(Origin::signed(user)));
+		let id = Assets::get_last_id();
+		
+		assert_ok!(Assets::set_project_data(
+			Origin::signed(user), id, vec!['h' as u8,'t' as u8,'t'  as u8 ,'p' as u8],
+			 vec!['4' as u8,'h' as u8,'6' as u8,'g' as u8]));
+			
+		assert_ok!(Assets::mint(Origin::signed(CUSTODIAN), id, user, 500));
+		assert_eq!(500, Assets::balance(id, user));
+
+		assert_ok!(Assets::self_burn(Origin::signed(user), id, 100));
+		assert_eq!(400, Assets::balance(id, user));
+		assert_eq!(Some(100), BurnCertificate::<Test>::get(user, id));
+
+		// burn more than owned
+		assert_noop!(Assets::self_burn(Origin::signed(user), id, 500),
+			Error::<Test>::BalanceLow);
+		assert_eq!(400, Assets::balance(id, user));
+		assert_eq!(Some(100), BurnCertificate::<Test>::get(user, id));
+	})
+}
+
+#[test]
+fn custodian_cannot_burn_more() {
+	new_test_ext().execute_with(|| {
+		let user = 4;
+		Balances::make_free_balance_be(&user, 1000);
+		assert_ok!(Assets::create(Origin::signed(user)));
+		let id = Assets::get_last_id();
+		
+		assert_ok!(Assets::set_project_data(
+			Origin::signed(user), id, vec!['h' as u8,'t' as u8,'t'  as u8 ,'p' as u8],
+			 vec!['4' as u8,'h' as u8,'6' as u8,'g' as u8]));
+			
+		assert_ok!(Assets::mint(Origin::signed(CUSTODIAN), id, user, 500));
+		assert_eq!(500, Assets::balance(id, user));
+
+		assert_ok!(Assets::self_burn(Origin::signed(user), id, 100));
+		assert_eq!(400, Assets::balance(id, user));
+		assert_eq!(Some(100), BurnCertificate::<Test>::get(user, id));
+
+		// burn more than owned
+		assert_noop!(Assets::burn(Origin::signed(CUSTODIAN), id, user, 500),
+			Error::<Test>::BalanceLow);
+		assert_eq!(400, Assets::balance(id, user));
+		assert_eq!(Some(100), BurnCertificate::<Test>::get(user, id));
 	})
 }

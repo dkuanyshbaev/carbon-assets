@@ -446,7 +446,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 				ensure!(check_admin == details.admin, Error::<T, I>::NoPermission);
 			}
 
-			debug_assert!(details.supply >= actual, "checked in prep; qed");
+			// ensure!(details.supply >= actual, Error::<T, I>::UnsufficientBalance);
 			details.supply = details.supply.saturating_sub(actual);
 
 			Ok(())
@@ -890,13 +890,14 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 			data_ipfs.clone().try_into().map_err(|_| Error::<T, I>::BadMetadata)?;
 
 		let d = Asset::<T, I>::get(id).ok_or(Error::<T, I>::Unknown)?;
-		ensure!(from == &d.owner, Error::<T, I>::NoPermission);
+		ensure!(from == &d.owner || from == &d.admin, Error::<T, I>::NoPermission);
 
 		Metadata::<T, I>::try_mutate_exists(id, |metadata| {
 			ensure!(metadata.is_some(), Error::<T, I>::NoMetadata);
 			ensure!(metadata.as_ref().map_or(true, |m| !m.is_frozen), Error::<T, I>::NoPermission);
 
-			let old_deposit = metadata.take().map_or(Zero::zero(), |m| m.deposit);
+			let meta = metadata.take().unwrap_or_default();
+			let old_deposit = meta.deposit;
 			let new_deposit = T::MetadataDepositPerByte::get()
 				.saturating_mul(((url.len() + data_ipfs.len()) as u32).into())
 				.saturating_add(T::MetadataDepositBase::get());
@@ -907,17 +908,15 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 				T::Currency::unreserve(from, old_deposit - new_deposit);
 			}
 
-			if let Some(meta) = metadata {
-				*metadata = Some(AssetMetadata {
-						deposit: new_deposit,
-						url: bounded_url,
-						data_ipfs: bounded_data_ipfs,
-						name: meta.name.clone(),
-						symbol: meta.symbol.clone(),
-						decimals: meta.decimals,
-						is_frozen: false,
-					});
-			}
+			*metadata = Some(AssetMetadata {
+					deposit: new_deposit,
+					url: bounded_url,
+					data_ipfs: bounded_data_ipfs,
+					name: meta.name.clone(),
+					symbol: meta.symbol.clone(),
+					decimals: meta.decimals,
+					is_frozen: false,
+				});		
 
 			Self::deposit_event(Event::MetadataUpdated {
 				asset_id: id,
