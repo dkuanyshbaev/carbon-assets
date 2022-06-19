@@ -66,7 +66,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
 	// Additional logic
 
-	pub fn get_new_asset_id() -> Result<AssetId, DispatchError> {
+	pub(super) fn get_new_asset_id() -> Result<AssetId, DispatchError> {
 		let id = LastAssetId::<T, I>::get();
 		let new_id = id.checked_add(1).ok_or(ArithmeticError::Overflow)?;
 		LastAssetId::<T, I>::put(new_id);

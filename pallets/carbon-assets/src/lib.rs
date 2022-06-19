@@ -306,6 +306,7 @@ pub mod pallet {
 	>;
 
 	#[pallet::storage]
+	#[pallet::getter(fn get_last_id)]
 	/// Last created AssetId
 	pub(super) type LastAssetId<T: Config<I>, I: 'static = ()> = StorageValue<
 		_,

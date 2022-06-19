@@ -284,44 +284,48 @@ fn lifecycle_should_work() {
 	new_test_ext().execute_with(|| {
 		Balances::make_free_balance_be(&1, 100);
 		assert_ok!(Assets::create(Origin::signed(1)));
-		assert_eq!(Balances::reserved_balance(&1), 1);
-		assert!(Asset::<Test>::contains_key(0));
+		assert_eq!(Balances::reserved_balance(&1), 87);
+		let id = Assets::get_last_id();
+		assert_eq!(101, id);
+		assert!(Asset::<Test>::contains_key(id));
 
-		assert_eq!(Balances::reserved_balance(&1), 4);
-		assert!(Metadata::<Test>::contains_key(0));
+		assert_eq!(Balances::reserved_balance(&1), 87);
+		assert!(Metadata::<Test>::contains_key(id));
 
 		Balances::make_free_balance_be(&10, 100);
-		assert_ok!(Assets::mint(Origin::signed(1), 0, 10, 100));
+		assert_ok!(Assets::mint(Origin::signed(1), id, 10, 100));
 		Balances::make_free_balance_be(&20, 100);
-		assert_ok!(Assets::mint(Origin::signed(1), 0, 20, 100));
-		assert_eq!(Account::<Test>::iter_prefix(0).count(), 2);
+		assert_ok!(Assets::mint(Origin::signed(1), id, 20, 100));
+		assert_eq!(Account::<Test>::iter_prefix(id).count(), 2);
 
-		let w = Asset::<Test>::get(0).unwrap().destroy_witness();
-		assert_ok!(Assets::destroy(Origin::signed(1), 0, w));
+		let w = Asset::<Test>::get(id).unwrap().destroy_witness();
+		assert_ok!(Assets::destroy(Origin::signed(1), id, w));
 		assert_eq!(Balances::reserved_balance(&1), 0);
 
-		assert!(!Asset::<Test>::contains_key(0));
-		assert!(!Metadata::<Test>::contains_key(0));
-		assert_eq!(Account::<Test>::iter_prefix(0).count(), 0);
+		assert!(!Asset::<Test>::contains_key(id));
+		assert!(!Metadata::<Test>::contains_key(id));
+		assert_eq!(Account::<Test>::iter_prefix(id).count(), 0);
 
 		assert_ok!(Assets::create(Origin::signed(1)));
-		assert_eq!(Balances::reserved_balance(&1), 1);
-		assert!(Asset::<Test>::contains_key(0));
+		let second_id = Assets::get_last_id();
+		assert_eq!(102, second_id);
+		assert_eq!(Balances::reserved_balance(&1), 87);
+		assert!(Asset::<Test>::contains_key(second_id));
 
-		assert_eq!(Balances::reserved_balance(&1), 4);
-		assert!(Metadata::<Test>::contains_key(0));
+		assert_eq!(Balances::reserved_balance(&1), 87);
+		assert!(Metadata::<Test>::contains_key(second_id));
 
-		assert_ok!(Assets::mint(Origin::signed(1), 0, 10, 100));
-		assert_ok!(Assets::mint(Origin::signed(1), 0, 20, 100));
-		assert_eq!(Account::<Test>::iter_prefix(0).count(), 2);
+		assert_ok!(Assets::mint(Origin::signed(1), second_id, 10, 100));
+		assert_ok!(Assets::mint(Origin::signed(1), second_id, 20, 100));
+		assert_eq!(Account::<Test>::iter_prefix(second_id).count(), 2);
 
-		let w = Asset::<Test>::get(0).unwrap().destroy_witness();
-		assert_ok!(Assets::destroy(Origin::root(), 0, w));
+		let w = Asset::<Test>::get(second_id).unwrap().destroy_witness();
+		assert_ok!(Assets::destroy(Origin::root(), second_id, w));
 		assert_eq!(Balances::reserved_balance(&1), 0);
 
-		assert!(!Asset::<Test>::contains_key(0));
-		assert!(!Metadata::<Test>::contains_key(0));
-		assert_eq!(Account::<Test>::iter_prefix(0).count(), 0);
+		assert!(!Asset::<Test>::contains_key(second_id));
+		assert!(!Metadata::<Test>::contains_key(second_id));
+		assert_eq!(Account::<Test>::iter_prefix(second_id).count(), 0);
 	});
 }
 
@@ -546,21 +550,21 @@ fn transfer_owner_should_work() {
 		Balances::make_free_balance_be(&1, 100);
 		Balances::make_free_balance_be(&2, 100);
 		assert_ok!(Assets::create(Origin::signed(1)));
+		let id = Assets::get_last_id();
+		assert_eq!(Balances::reserved_balance(&1), 87);
 
-		assert_eq!(Balances::reserved_balance(&1), 1);
-
-		assert_ok!(Assets::transfer_ownership(Origin::signed(1), 0, 2));
-		assert_eq!(Balances::reserved_balance(&2), 1);
+		assert_ok!(Assets::transfer_ownership(Origin::signed(1), id, 2));
+		assert_eq!(Balances::reserved_balance(&2), 87);
 		assert_eq!(Balances::reserved_balance(&1), 0);
 
 		assert_noop!(
-			Assets::transfer_ownership(Origin::signed(1), 0, 1),
+			Assets::transfer_ownership(Origin::signed(1), id, 1),
 			Error::<Test>::NoPermission
 		);
 
 		// Set metadata now and make sure that deposit gets transferred back.
-		assert_ok!(Assets::transfer_ownership(Origin::signed(2), 0, 1));
-		assert_eq!(Balances::reserved_balance(&1), 22);
+		assert_ok!(Assets::transfer_ownership(Origin::signed(2), id, 1));
+		assert_eq!(Balances::reserved_balance(&1), 87);
 		assert_eq!(Balances::reserved_balance(&2), 0);
 	});
 }
@@ -799,26 +803,27 @@ fn force_metadata_should_work() {
 #[test]
 fn force_asset_status_should_work() {
 	new_test_ext().execute_with(|| {
-		Balances::make_free_balance_be(&1, 10);
+		Balances::make_free_balance_be(&1, 100);
 		Balances::make_free_balance_be(&2, 10);
 		assert_ok!(Assets::create(Origin::signed(1)));
-		assert_ok!(Assets::mint(Origin::signed(1), 0, 1, 50));
-		assert_ok!(Assets::mint(Origin::signed(1), 0, 2, 150));
+		let id = Assets::get_last_id();
+		assert_ok!(Assets::mint(Origin::signed(1), id, 1, 50));
+		assert_ok!(Assets::mint(Origin::signed(1), id, 2, 150));
 
 		// force asset status to change min_balance > balance
-		assert_ok!(Assets::force_asset_status(Origin::root(), 0, 1, 1, 1, 1, 100, true, false));
-		assert_eq!(Assets::balance(0, 1), 50);
+		assert_ok!(Assets::force_asset_status(Origin::root(), id, 1, 1, 1, 1, 100, true, false));
+		assert_eq!(Assets::balance(id, 1), 50);
 
 		// account can recieve assets for balance < min_balance
-		assert_ok!(Assets::transfer(Origin::signed(2), 0, 1, 1));
-		assert_eq!(Assets::balance(0, 1), 51);
+		assert_ok!(Assets::transfer(Origin::signed(2), id, 1, 1));
+		assert_eq!(Assets::balance(id, 1), 51);
 
 		// account on outbound transfer will cleanup for balance < min_balance
-		assert_ok!(Assets::transfer(Origin::signed(1), 0, 2, 1));
-		assert_eq!(Assets::balance(0, 1), 0);
+		assert_ok!(Assets::transfer(Origin::signed(1), id, 2, 1));
+		assert_eq!(Assets::balance(id, 1), 0);
 
 		// won't create new account with balance below min_balance
-		assert_noop!(Assets::transfer(Origin::signed(2), 0, 3, 50), TokenError::BelowMinimum);
+		assert_noop!(Assets::transfer(Origin::signed(2), id, 3, 50), TokenError::BelowMinimum);
 
 		// force asset status will not execute for non-existent class
 		assert_noop!(
@@ -827,11 +832,11 @@ fn force_asset_status_should_work() {
 		);
 
 		// account drains to completion when funds dip below min_balance
-		assert_ok!(Assets::force_asset_status(Origin::root(), 0, 1, 1, 1, 1, 110, true, false));
-		assert_ok!(Assets::transfer(Origin::signed(2), 0, 1, 110));
-		assert_eq!(Assets::balance(0, 1), 200);
-		assert_eq!(Assets::balance(0, 2), 0);
-		assert_eq!(Assets::total_supply(0), 200);
+		assert_ok!(Assets::force_asset_status(Origin::root(), id, 1, 1, 1, 1, 110, true, false));
+		assert_ok!(Assets::transfer(Origin::signed(2), id, 1, 110));
+		assert_eq!(Assets::balance(id, 1), 200);
+		assert_eq!(Assets::balance(id, 2), 0);
+		assert_eq!(Assets::total_supply(id), 200);
 	});
 }
 
