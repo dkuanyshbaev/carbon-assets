@@ -261,11 +261,6 @@ impl pallet_sudo::Config for Runtime {
 	type Call = Call;
 }
 
-// Configure the pallet-template in pallets/template.
-// impl pallet_template::Config for Runtime {
-// 	type Event = Event;
-// }
-
 parameter_types! {
 	pub const CarbonAssetDeposit: Balance = 0;
 	pub const CarbonAssetAccountDeposit: Balance = 0;

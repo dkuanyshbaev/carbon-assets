@@ -283,11 +283,10 @@ fn force_cancel_approval_works() {
 fn lifecycle_should_work() {
 	new_test_ext().execute_with(|| {
 		Balances::make_free_balance_be(&1, 100);
-		assert_ok!(Assets::create(Origin::signed(1), 0, 1, 1));
+		assert_ok!(Assets::create(Origin::signed(1)));
 		assert_eq!(Balances::reserved_balance(&1), 1);
 		assert!(Asset::<Test>::contains_key(0));
 
-		assert_ok!(Assets::set_metadata(Origin::signed(1), 0, vec![0], vec![0], 12));
 		assert_eq!(Balances::reserved_balance(&1), 4);
 		assert!(Metadata::<Test>::contains_key(0));
 
@@ -305,11 +304,10 @@ fn lifecycle_should_work() {
 		assert!(!Metadata::<Test>::contains_key(0));
 		assert_eq!(Account::<Test>::iter_prefix(0).count(), 0);
 
-		assert_ok!(Assets::create(Origin::signed(1), 0, 1, 1));
+		assert_ok!(Assets::create(Origin::signed(1)));
 		assert_eq!(Balances::reserved_balance(&1), 1);
 		assert!(Asset::<Test>::contains_key(0));
 
-		assert_ok!(Assets::set_metadata(Origin::signed(1), 0, vec![0], vec![0], 12));
 		assert_eq!(Balances::reserved_balance(&1), 4);
 		assert!(Metadata::<Test>::contains_key(0));
 
@@ -529,7 +527,6 @@ fn origin_guards_should_work() {
 			Assets::transfer_ownership(Origin::signed(2), 0, 2),
 			Error::<Test>::NoPermission
 		);
-		assert_noop!(Assets::set_team(Origin::signed(2), 0, 2, 2, 2), Error::<Test>::NoPermission);
 		assert_noop!(Assets::freeze(Origin::signed(2), 0, 1), Error::<Test>::NoPermission);
 		assert_noop!(Assets::thaw(Origin::signed(2), 0, 2), Error::<Test>::NoPermission);
 		assert_noop!(Assets::mint(Origin::signed(2), 0, 2, 100), Error::<Test>::NoPermission);
@@ -548,7 +545,7 @@ fn transfer_owner_should_work() {
 	new_test_ext().execute_with(|| {
 		Balances::make_free_balance_be(&1, 100);
 		Balances::make_free_balance_be(&2, 100);
-		assert_ok!(Assets::create(Origin::signed(1), 0, 1, 1));
+		assert_ok!(Assets::create(Origin::signed(1)));
 
 		assert_eq!(Balances::reserved_balance(&1), 1);
 
@@ -562,24 +559,9 @@ fn transfer_owner_should_work() {
 		);
 
 		// Set metadata now and make sure that deposit gets transferred back.
-		assert_ok!(Assets::set_metadata(Origin::signed(2), 0, vec![0u8; 10], vec![0u8; 10], 12));
 		assert_ok!(Assets::transfer_ownership(Origin::signed(2), 0, 1));
 		assert_eq!(Balances::reserved_balance(&1), 22);
 		assert_eq!(Balances::reserved_balance(&2), 0);
-	});
-}
-
-#[test]
-fn set_team_should_work() {
-	new_test_ext().execute_with(|| {
-		assert_ok!(Assets::force_create(Origin::root(), 0, 1, true, 1));
-		assert_ok!(Assets::set_team(Origin::signed(1), 0, 2, 3, 4));
-
-		assert_ok!(Assets::mint(Origin::signed(2), 0, 2, 100));
-		assert_ok!(Assets::freeze(Origin::signed(4), 0, 2));
-		assert_ok!(Assets::thaw(Origin::signed(3), 0, 2));
-		assert_ok!(Assets::force_transfer(Origin::signed(3), 0, 2, 3, 100));
-		assert_ok!(Assets::burn(Origin::signed(3), 0, 3, 100));
 	});
 }
 
@@ -655,57 +637,6 @@ fn burning_asset_balance_with_zero_balance_does_nothing() {
 		assert_noop!(Assets::burn(Origin::signed(1), 0, 2, u64::MAX), Error::<Test>::NoAccount);
 		assert_eq!(Assets::balance(0, 2), 0);
 		assert_eq!(Assets::total_supply(0), 100);
-	});
-}
-
-#[test]
-fn set_metadata_should_work() {
-	new_test_ext().execute_with(|| {
-		// Cannot add metadata to unknown asset
-		assert_noop!(
-			Assets::set_metadata(Origin::signed(1), 0, vec![0u8; 10], vec![0u8; 10], 12),
-			Error::<Test>::Unknown,
-		);
-		assert_ok!(Assets::force_create(Origin::root(), 0, 1, true, 1));
-		// Cannot add metadata to unowned asset
-		assert_noop!(
-			Assets::set_metadata(Origin::signed(2), 0, vec![0u8; 10], vec![0u8; 10], 12),
-			Error::<Test>::NoPermission,
-		);
-
-		// Cannot add oversized metadata
-		assert_noop!(
-			Assets::set_metadata(Origin::signed(1), 0, vec![0u8; 100], vec![0u8; 10], 12),
-			Error::<Test>::BadMetadata,
-		);
-		assert_noop!(
-			Assets::set_metadata(Origin::signed(1), 0, vec![0u8; 10], vec![0u8; 100], 12),
-			Error::<Test>::BadMetadata,
-		);
-
-		// Successfully add metadata and take deposit
-		Balances::make_free_balance_be(&1, 30);
-		assert_ok!(Assets::set_metadata(Origin::signed(1), 0, vec![0u8; 10], vec![0u8; 10], 12));
-		assert_eq!(Balances::free_balance(&1), 9);
-
-		// Update deposit
-		assert_ok!(Assets::set_metadata(Origin::signed(1), 0, vec![0u8; 10], vec![0u8; 5], 12));
-		assert_eq!(Balances::free_balance(&1), 14);
-		assert_ok!(Assets::set_metadata(Origin::signed(1), 0, vec![0u8; 10], vec![0u8; 15], 12));
-		assert_eq!(Balances::free_balance(&1), 4);
-
-		// Cannot over-reserve
-		assert_noop!(
-			Assets::set_metadata(Origin::signed(1), 0, vec![0u8; 20], vec![0u8; 20], 12),
-			BalancesError::<Test, _>::InsufficientBalance,
-		);
-
-		// Clear Metadata
-		assert!(Metadata::<Test>::contains_key(0));
-		assert_noop!(Assets::clear_metadata(Origin::signed(2), 0), Error::<Test>::NoPermission);
-		assert_noop!(Assets::clear_metadata(Origin::signed(1), 1), Error::<Test>::Unknown);
-		assert_ok!(Assets::clear_metadata(Origin::signed(1), 0));
-		assert!(!Metadata::<Test>::contains_key(0));
 	});
 }
 
@@ -798,6 +729,8 @@ fn force_metadata_should_work() {
 			0,
 			vec![0u8; 10],
 			vec![0u8; 10],
+			vec![0u8; 10],
+			vec![0u8; 10],
 			8,
 			false
 		));
@@ -810,6 +743,8 @@ fn force_metadata_should_work() {
 			0,
 			vec![1u8; 10],
 			vec![1u8; 10],
+			vec![0u8; 10],
+			vec![0u8; 10],
 			8,
 			false
 		));
@@ -817,7 +752,8 @@ fn force_metadata_should_work() {
 
 		// attempt to set metadata for non-existent asset class
 		assert_noop!(
-			Assets::force_set_metadata(Origin::root(), 1, vec![0u8; 10], vec![0u8; 10], 8, false),
+			Assets::force_set_metadata(Origin::root(), 1, vec![0u8; 10], vec![0u8; 10], vec![0u8; 10],
+			vec![0u8; 10], 8, false),
 			Error::<Test>::Unknown
 		);
 
@@ -828,6 +764,8 @@ fn force_metadata_should_work() {
 				Origin::root(),
 				0,
 				vec![0u8; limit + 1],
+				vec![0u8; 10],
+				vec![0u8; 10],
 				vec![0u8; 10],
 				8,
 				false
@@ -840,6 +778,8 @@ fn force_metadata_should_work() {
 				0,
 				vec![0u8; 10],
 				vec![0u8; limit + 1],
+				vec![0u8; 10],
+				vec![0u8; 10],
 				8,
 				false
 			),
@@ -861,7 +801,7 @@ fn force_asset_status_should_work() {
 	new_test_ext().execute_with(|| {
 		Balances::make_free_balance_be(&1, 10);
 		Balances::make_free_balance_be(&2, 10);
-		assert_ok!(Assets::create(Origin::signed(1), 0, 1, 30));
+		assert_ok!(Assets::create(Origin::signed(1)));
 		assert_ok!(Assets::mint(Origin::signed(1), 0, 1, 50));
 		assert_ok!(Assets::mint(Origin::signed(1), 0, 2, 150));
 
@@ -944,6 +884,8 @@ fn querying_name_symbol_and_decimals_should_work() {
 			0,
 			vec![0u8; 10],
 			vec![1u8; 10],
+			vec![0u8; 10],
+			vec![0u8; 10],
 			12,
 			false
 		));

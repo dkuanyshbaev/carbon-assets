@@ -33,6 +33,8 @@ use sp_runtime::{
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
+pub const CUSTODIAN: u64 = 1;
+
 construct_runtime!(
 	pub enum Test where
 		Block = Block,
@@ -101,37 +103,38 @@ impl Config for Test {
 	type Freezer = TestFreezer;
 	type WeightInfo = ();
 	type Extra = ();
+	type Randomness = RandomnessCollectiveFlip;
 }
 
 use std::{cell::RefCell, collections::HashMap};
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub(crate) enum Hook {
-	Died(u32, u64),
+	Died(u64, u64),
 }
 thread_local! {
-	static FROZEN: RefCell<HashMap<(u32, u64), u64>> = RefCell::new(Default::default());
+	static FROZEN: RefCell<HashMap<(u64, u64), u64>> = RefCell::new(Default::default());
 	static HOOKS: RefCell<Vec<Hook>> = RefCell::new(Default::default());
 }
 
 pub struct TestFreezer;
-impl FrozenBalance<u32, u64, u64> for TestFreezer {
-	fn frozen_balance(asset: u32, who: &u64) -> Option<u64> {
+impl FrozenBalance<u64, u64, u64> for TestFreezer {
+	fn frozen_balance(asset: u64, who: &u64) -> Option<u64> {
 		FROZEN.with(|f| f.borrow().get(&(asset, who.clone())).cloned())
 	}
 
-	fn died(asset: u32, who: &u64) {
+	fn died(asset: u64, who: &u64) {
 		HOOKS.with(|h| h.borrow_mut().push(Hook::Died(asset, who.clone())));
 		// Sanity check: dead accounts have no balance.
 		assert!(Assets::balance(asset, *who).is_zero());
 	}
 }
 
-pub(crate) fn set_frozen_balance(asset: u32, who: u64, amount: u64) {
+pub(crate) fn set_frozen_balance(asset: u64, who: u64, amount: u64) {
 	FROZEN.with(|f| f.borrow_mut().insert((asset, who), amount));
 }
 
-pub(crate) fn clear_frozen_balance(asset: u32, who: u64) {
+pub(crate) fn clear_frozen_balance(asset: u64, who: u64) {
 	FROZEN.with(|f| f.borrow_mut().remove(&(asset, who)));
 }
 
@@ -147,6 +150,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
 	let config: pallet_assets::GenesisConfig<Test> = pallet_assets::GenesisConfig {
+		custodian: Some(CUSTODIAN),
 		assets: vec![
 			// id, owner, is_sufficient, min_balance
 			(999, 0, true, 1),

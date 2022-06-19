@@ -1,111 +1,85 @@
-# Assets Module
+# Carbon Assets Pallet
 
-A simple, secure module for dealing with fungible assets.
+Module for tokenization of carbon units from external registry. (Based on Parity [Asset pallet](https://github.com/paritytech/substrate/tree/polkadot-v0.9.23/frame/assets#assets-module) )
 
 ## Overview
 
-The Assets module provides functionality for asset management of fungible asset classes
-with a fixed supply, including:
-
-* Asset Issuance
-* Asset Transfer
-* Asset Destruction
-
-To use it in your runtime, you need to implement the assets [`assets::Config`](https://docs.rs/pallet-assets/latest/pallet_assets/pallet/trait.Config.html).
-
-The supported dispatchable functions are documented in the [`assets::Call`](https://docs.rs/pallet-assets/latest/pallet_assets/pallet/enum.Call.html) enum.
+The Carbon Assets module provides functionality for tokenization on Carbon Units from external registry. The current edition needs a manager who verifies the tokenization.
 
 ### Terminology
 
-* **Asset issuance:** The creation of a new asset, whose total supply will belong to the
-  account that issues the asset.
-* **Asset transfer:** The action of transferring assets from one account to another.
-* **Asset destruction:** The process of an account removing its entire holding of an asset.
-* **Fungible asset:** An asset whose units are interchangeable.
-* **Non-fungible asset:** An asset for which each unit has unique characteristics.
+* **Custodian:** The Evercity manager. Only custodian can mint created carbon asset.
+* **Carbon Asset burning:** Burn of tokenized carbon asset. The owner recieves Burn Certificate.
+* **BurnCertificate:**  The storage of amount of carbon assets burned per `AccountId` per `AssetId`. 
 
-### Goals
-
-The assets system in Substrate is designed to make the following possible:
-
-* Issue a unique asset to its creator's account.
-* Move assets between accounts.
-* Remove an account's balance of an asset when requested by that account's owner and update
-  the asset's total supply.
+### Tokenization flow
+1. User creates a carbon asset via `create` extrinsic. The name of the asset is generated. Asset decimals are set to 9.
+2. User goes to external registry and buy and retire/transfer the asset with the generated name. User recieves some kind of public serial number of retirement.
+3. User updates metadata of the asset via `set_project_data` extrinsic. User should include the serial number from previous step, amount of carbon units and some project information and store that on ipfs. The metadata updated with `url` and ipfs link `data_ipfs`.
+4. Custodian verifies all data via link from previous step and `mint` carbon assets to user's account. 
+5. User can burn carbon assets that they have (that is what carbon assets are made for) via `self_burn` extrinsic. Then user recieves BurnCertificate. User can burn particular carbon asset many times - all changes sum up in BurnCertificate.
 
 ## Interface
 
 ### Dispatchable Functions
 
-* `issue` - Issues the total supply of a new fungible asset to the account of the caller of the function.
-* `transfer` - Transfers an `amount` of units of fungible asset `id` from the balance of
-the function caller's account (`origin`) to a `target` account.
-* `destroy` - Destroys the entire holding of a fungible asset `id` associated with the account
-that called the function.
-
-Please refer to the [`Call`](https://docs.rs/pallet-assets/latest/pallet_assets/enum.Call.html) enum and its associated variants for documentation on each function.
-
-### Public Functions
-<!-- Original author of descriptions: @gavofyork -->
-
-* `balance` - Get the asset `id` balance of `who`.
-* `total_supply` - Get the total supply of an asset `id`.
-
-Please refer to the [`Pallet`](https://docs.rs/pallet-assets/latest/pallet_assets/pallet/struct.Pallet.html) struct for details on publicly available functions.
-
-## Usage
-
-The following example shows how to use the Assets module in your runtime by exposing public functions to:
-
-* Issue a new fungible asset for a token distribution event (airdrop).
-* Query the fungible asset holding balance of an account.
-* Query the total supply of a fungible asset that has been issued.
+Please refer to the `#[pallet::call]` for documentation on each function.
 
 ### Prerequisites
 
-Import the Assets module and types and derive your runtime's configuration traits from the Assets module trait.
+Add Carbon Assets Module to your Cargo.toml dependencies.
 
-### Simple Code Snippet
+```toml
+[dependencies]
+pallet-carbon-assets = { version = "0.1.0", default-features = false, git = "https://github.com/EvercityEcosystem/carbon-assets.git" }
+```
+Also you need some source of `Randomness`, for example `pallet_randomness_collective_flip`.
+
+### Configuration
+
+Configure `construct_runtime!` in runtime/src/lib.rs
 
 ```rust
-use pallet_assets as assets;
-use sp_runtime::ArithmeticError;
+construct_runtime!(
+	pub enum Runtime where
+		Block = Block,
+		NodeBlock = opaque::Block,
+		UncheckedExtrinsic = UncheckedExtrinsic
+	{
+		System: frame_system,
+		RandomnessCollectiveFlip: pallet_randomness_collective_flip,
+        ...
+		CarbonAssets: pallet_carbon_assets,
+	}
+);
+```
+Configure `pallet_carbon_assets::Config`
+```rust
+parameter_types! {
+	pub const CarbonAssetDeposit: Balance = 0;
+	pub const CarbonAssetAccountDeposit: Balance = 0;
+	pub const CarbonMetadataDepositBase: Balance = 0;
+	pub const CarbonMetadataDepositPerByte: Balance = 0;
+	pub const CarbonApprovalDeposit: Balance = 0;
+	pub const CarbonStringLimit: u32 = 50;
+}
 
-#[frame_support::pallet]
-pub mod pallet {
-    use super::*;
-    use frame_support::pallet_prelude::*;
-    use frame_system::pallet_prelude::*;
-
-    #[pallet::pallet]
-    pub struct Pallet<T>(_);
-
-    #[pallet::config]
-    pub trait Config: frame_system::Config + assets::Config {}
-
-    #[pallet::call]
-    impl<T: Config> Pallet<T> {
-        pub fn issue_token_airdrop(origin: OriginFor<T>) -> DispatchResult {
-            let sender = ensure_signed(origin)?;
-
-            const ACCOUNT_ALICE: u64 = 1;
-            const ACCOUNT_BOB: u64 = 2;
-            const COUNT_AIRDROP_RECIPIENTS: u64 = 2;
-            const TOKENS_FIXED_SUPPLY: u64 = 100;
-
-            ensure!(!COUNT_AIRDROP_RECIPIENTS.is_zero(), ArithmeticError::DivisionByZero);
-
-            let asset_id = Self::next_asset_id();
-
-            <NextAssetId<T>>::mutate(|asset_id| *asset_id += 1);
-            <Balances<T>>::insert((asset_id, &ACCOUNT_ALICE), TOKENS_FIXED_SUPPLY / COUNT_AIRDROP_RECIPIENTS);
-            <Balances<T>>::insert((asset_id, &ACCOUNT_BOB), TOKENS_FIXED_SUPPLY / COUNT_AIRDROP_RECIPIENTS);
-            <TotalSupply<T>>::insert(asset_id, TOKENS_FIXED_SUPPLY);
-
-            Self::deposit_event(Event::Issued(asset_id, sender, TOKENS_FIXED_SUPPLY));
-            Ok(())
-        }
-    }
+pub use pallet_carbon_assets;
+impl pallet_carbon_assets::Config for Runtime {
+	type Event = Event;
+	type Balance = u128;
+	type Currency = Balances;
+	type ForceOrigin = frame_system::EnsureRoot<AccountId>;
+	type AssetDeposit = CarbonAssetDeposit;
+	type AssetAccountDeposit = CarbonAssetAccountDeposit;
+	type MetadataDepositBase = CarbonMetadataDepositBase;
+	type MetadataDepositPerByte = CarbonMetadataDepositPerByte;
+	type ApprovalDeposit = CarbonApprovalDeposit;
+	type StringLimit = CarbonStringLimit;
+	type Freezer = ();
+	type Extra = ();
+	type WeightInfo = pallet_carbon_assets::weights::SubstrateWeight<Runtime>;
+	type Randomness = RandomnessCollectiveFlip;
 }
 ```
 
@@ -115,7 +89,7 @@ Below are assumptions that must be held when using this module.  If any of
 them are violated, the behavior of this module is undefined.
 
 * The total count of assets should be less than
-  `Config::AssetId::max_value()`.
+  `u64::MAX`.
 
 ## Related Modules
 
