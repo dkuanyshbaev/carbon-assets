@@ -716,11 +716,13 @@ pub mod pallet {
 		pub fn mint(
 			origin: OriginFor<T>,
 			#[pallet::compact] id: AssetId,
-			beneficiary: <T::Lookup as StaticLookup>::Source,
+			//beneficiary: <T::Lookup as StaticLookup>::Source,
 			#[pallet::compact] amount: T::Balance,
 		) -> DispatchResult {
 			let origin = ensure_signed(origin)?;
-			let beneficiary = T::Lookup::lookup(beneficiary)?;
+			// let beneficiary = T::Lookup::lookup(beneficiary)?;
+			let asset_details = Asset::<T, I>::get(id).ok_or(Error::<T, I>::Unknown)?;
+			let beneficiary = asset_details.owner;
 			Self::do_mint(id, &beneficiary, amount, Some(origin))?;
 			Ok(())
 		}
