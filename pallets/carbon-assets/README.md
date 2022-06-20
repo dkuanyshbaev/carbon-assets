@@ -1,23 +1,23 @@
 # Carbon Assets Pallet
 
-Module for tokenization of carbon units from external registry. (Based on Parity [Asset pallet](https://github.com/paritytech/substrate/tree/polkadot-v0.9.23/frame/assets#assets-module) )
+Module for tokenization of carbon units from the external registry. (Based on Parity [Asset pallet](https://github.com/paritytech/substrate/tree/polkadot-v0.9.23/frame/assets#assets-module) )
 
 ## Overview
 
-The Carbon Assets module provides functionality for tokenization on Carbon Units from external registry. The current edition needs a manager who verifies the tokenization.
+The Carbon Assets module provides functionality for the tokenization of Carbon Units from the external registry. The current edition needs a manager who verifies the tokenization.
 
 ### Terminology
 
-* **Custodian:** The Evercity manager. Only custodian can mint created carbon asset. Can be set in Genesis Config or by Sudo `set_custodian`.
-* **Carbon Asset burning:** Burn of tokenized carbon asset. The owner recieves Burn Certificate.
+* **Custodian:** The Evercity manager. Only a custodian can mint created carbon asset. Can be set in Genesis Config or by Sudo `set_custodian`.
+* **Carbon Asset burning:** Burn of tokenized carbon asset. The owner receives Burn Certificate.
 * **BurnCertificate:**  The storage of amount of carbon assets burned per `AccountId` per `AssetId`. 
 
 ### Tokenization flow
 1. User creates a carbon asset via `create` extrinsic. The name of the asset is generated. Asset decimals are set to 9.
-2. User goes to external registry and buy and retire/transfer the asset with the generated name. User recieves some kind of public serial number of retirement.
-3. User updates metadata of the asset via `set_project_data` extrinsic. User should include the serial number from previous step, amount of carbon units and some project information and store that on ipfs. The metadata updated with `url` and ipfs link `data_ipfs`.
-4. Custodian verifies all data via link from previous step and `mint` carbon assets to user's account. 
-5. User can burn carbon assets that they have (that is what carbon assets are made for) via `self_burn` extrinsic. Then user recieves BurnCertificate. User can burn particular carbon asset many times - all changes sum up in BurnCertificate.
+2. User goes to the external registry and buys and retires/transfers the asset with the generated name. The user receives some kind of public serial number of retirement.
+3. User updates metadata of the asset via `set_project_data` extrinsic. The user should include the serial number from the previous step, amount of carbon units and some project information and store that on ipfs. The metadata is updated with `url` and ipfs link `data_ipfs`.
+4. Custodian verifies all data via the link from the previous step and `mint` carbon assets to the user's account. 
+5. The user can burn carbon assets that they have (that is what carbon assets are made for) via `self_burn` extrinsic. Then user receives a BurnCertificate. The user can burn a particular carbon asset many times - all changes sum up in the BurnCertificate. The Custodian also can burn carbon assets for the user via `burn` extrinsic. The user also receives a BurnCertificate.
 
 ## Interface
 

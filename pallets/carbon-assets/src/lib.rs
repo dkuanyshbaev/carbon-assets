@@ -99,7 +99,6 @@
 //! * `freeze`: Disallows further `transfer`s from an account; called by the asset class's Freezer.
 //! * `thaw`: Allows further `transfer`s from an account; called by the asset class's Admin.
 //! * `transfer_ownership`: Changes an asset class's Owner; called by the asset class's Owner.
-//! * `set_team`: Changes an asset class's Admin, Freezer and Issuer; called by the asset class's
 //!   Owner.
 //!
 //! Please refer to the [`Call`] enum and its associated variants for documentation on each
@@ -529,8 +528,8 @@ pub mod pallet {
 		NoCustodian,
 		/// Metadata for the asset does not exist.
 		NoMetadata,
-		/// The account doesn't have needed balance.
-		UnsufficientBalance,
+		/// Project data cannot be changed after minting.
+		CannotChangeAfterMint,
 	}
 
 	#[pallet::call]
@@ -564,7 +563,7 @@ pub mod pallet {
 		///
 		/// Funds of sender are reserved by `AssetDeposit`.
 		/// 
-		/// Admin of asset are custodian. Fails if no custodian are set.
+		/// Admin of asset is the Custodian. Fails if no custodian are set.
 		/// Set asset metadata: generated `name` and `symbol`, decimals to 9.
 		/// 
 		/// Emits `Created` event when successful.
@@ -608,7 +607,7 @@ pub mod pallet {
 
 		/// Set project data to metadata of an asset.
 		/// 
-		/// Origin must be Signed and the sender should be the Owner of the asset `id`.
+		/// Origin must be Signed and the sender should be the Owner of the asset `id` or the Custodian.
 		/// 
 		/// - `id`: The identifier of the asset to update.
 		/// - `url`: The url.
@@ -700,27 +699,24 @@ pub mod pallet {
 			.into())
 		}
 
-		/// Mint assets of a particular class.
+		/// Mint carbon assets of a particular class by Custodian. Benefitiary is the owner of the asset.
 		///
-		/// The origin must be Signed and the sender must be the Issuer of the asset `id`.
+		/// The origin must be Signed and the sender must be the Custodian == the Issuer of the asset `id`.
 		///
 		/// - `id`: The identifier of the asset to have some amount minted.
-		/// - `beneficiary`: The account to be credited with the minted assets.
 		/// - `amount`: The amount of the asset to be minted.
 		///
 		/// Emits `Issued` event when successful.
 		///
 		/// Weight: `O(1)`
-		/// Modes: Pre-existing balance of `beneficiary`; Account pre-existence of `beneficiary`.
+		/// 
 		#[pallet::weight(T::WeightInfo::mint())]
 		pub fn mint(
 			origin: OriginFor<T>,
 			#[pallet::compact] id: AssetId,
-			//beneficiary: <T::Lookup as StaticLookup>::Source,
 			#[pallet::compact] amount: T::Balance,
 		) -> DispatchResult {
 			let origin = ensure_signed(origin)?;
-			// let beneficiary = T::Lookup::lookup(beneficiary)?;
 			let asset_details = Asset::<T, I>::get(id).ok_or(Error::<T, I>::Unknown)?;
 			let beneficiary = asset_details.owner;
 			Self::do_mint(id, &beneficiary, amount, Some(origin))?;
@@ -799,7 +795,6 @@ pub mod pallet {
 
 			let f = DebitFlags { keep_alive: false, best_effort: false };
 			let actual = Self::decrease_balance(id, &caller, amount, f, |actual, details| {
-				// ensure!(details.supply >= actual, Error::<T, I>::UnsufficientBalance);
 				details.supply = details.supply.saturating_sub(actual);
 
 				Ok(())

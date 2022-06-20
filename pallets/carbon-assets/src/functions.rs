@@ -446,7 +446,6 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 				ensure!(check_admin == details.admin, Error::<T, I>::NoPermission);
 			}
 
-			// ensure!(details.supply >= actual, Error::<T, I>::UnsufficientBalance);
 			details.supply = details.supply.saturating_sub(actual);
 
 			Ok(())
@@ -891,6 +890,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
 		let d = Asset::<T, I>::get(id).ok_or(Error::<T, I>::Unknown)?;
 		ensure!(from == &d.owner || from == &d.admin, Error::<T, I>::NoPermission);
+		ensure!(d.supply == Zero::zero(), Error::<T, I>::CannotChangeAfterMint);
 
 		Metadata::<T, I>::try_mutate_exists(id, |metadata| {
 			ensure!(metadata.is_some(), Error::<T, I>::NoMetadata);

@@ -1009,6 +1009,36 @@ fn set_project_data_second_time() {
 }
 
 #[test]
+fn set_project_data_after_mint_fail() {
+	new_test_ext().execute_with(|| {
+		let user = 4;
+		Balances::make_free_balance_be(&user, 1000);
+		assert_ok!(Assets::create(Origin::signed(user)));
+		let id = Assets::get_last_id();
+		
+		assert_ok!(Assets::set_project_data(
+			Origin::signed(user), id, vec!['h' as u8,'t' as u8,'t'  as u8 ,'p' as u8],
+			 vec!['4' as u8,'h' as u8,'6' as u8,'g' as u8]));
+		let metadata = Metadata::<Test>::get(id);
+		assert!(metadata.name.len() > 0);
+		assert!(metadata.symbol.len() > 0);
+		assert!(metadata.url.len() == 4);
+		assert!(metadata.data_ipfs.len() == 4);
+
+		assert_ok!(Assets::mint(Origin::signed(CUSTODIAN), id, 100));
+		assert_noop!(Assets::set_project_data(
+			Origin::signed(user), id, vec!['h' as u8,'t' as u8,'t'  as u8 ,'p' as u8],
+			 vec!['4' as u8,'h' as u8,'6' as u8,'g' as u8, 'f' as u8]), 
+			Error::<Test>::CannotChangeAfterMint);
+		let metadata = Metadata::<Test>::get(id);
+		assert!(metadata.name.len() > 0);
+		assert!(metadata.symbol.len() > 0);
+		assert!(metadata.url.len() == 4);
+		assert!(metadata.data_ipfs.len() == 4);
+	})
+}
+
+#[test]
 fn custodian_mint() {
 	new_test_ext().execute_with(|| {
 		let user = 4;
