@@ -8,7 +8,7 @@ The Carbon Assets module provides functionality for tokenization on Carbon Units
 
 ### Terminology
 
-* **Custodian:** The Evercity manager. Only custodian can mint created carbon asset.
+* **Custodian:** The Evercity manager. Only custodian can mint created carbon asset. Can be set in Genesis Config or by Sudo `set_custodian`.
 * **Carbon Asset burning:** Burn of tokenized carbon asset. The owner recieves Burn Certificate.
 * **BurnCertificate:**  The storage of amount of carbon assets burned per `AccountId` per `AssetId`. 
 
