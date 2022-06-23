@@ -267,7 +267,7 @@ parameter_types! {
 	pub const CarbonMetadataDepositBase: Balance = 0;
 	pub const CarbonMetadataDepositPerByte: Balance = 0;
 	pub const CarbonApprovalDeposit: Balance = 0;
-	pub const CarbonStringLimit: u32 = 50;
+	pub const CarbonStringLimit: u32 = 140;
 }
 
 pub use pallet_carbon_assets;

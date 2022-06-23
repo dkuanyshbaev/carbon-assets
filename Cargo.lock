@@ -3704,7 +3704,7 @@ dependencies = [
 
 [[package]]
 name = "node-template"
-version = "4.0.0-dev"
+version = "4.0.1"
 dependencies = [
  "clap",
  "frame-benchmarking",
@@ -3746,7 +3746,7 @@ dependencies = [
 
 [[package]]
 name = "node-template-runtime"
-version = "4.0.0-dev"
+version = "4.0.1"
 dependencies = [
  "frame-benchmarking",
  "frame-executive",
