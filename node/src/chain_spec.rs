@@ -46,9 +46,13 @@ pub fn development_config() -> Result<ChainSpec, String> {
 		"dev",
 		ChainType::Development,
 		move || {
-			let master_account_id: AccountId =
+			let custodian_account_id: AccountId =
                 Ss58Codec::from_ss58check("5HDgXzA3WG2Dt2Wjif3KKEp2ZFgnD4JWGetSG6U4VLk7UyaF")
                     .unwrap();
+			let master_account_id: AccountId =
+                Ss58Codec::from_ss58check("5Fc6su9eJgm18K1LT2V5KnqfhaW9z9MmLszG5YvTzcVJ7sVL")
+                    .unwrap();
+
 			testnet_genesis(
 				wasm_binary,
 				// Initial PoA authorities
@@ -58,10 +62,10 @@ pub fn development_config() -> Result<ChainSpec, String> {
 				// Pre-funded accounts
 				vec![
 					master_account_id.clone(),
-					get_account_id_from_seed::<sr25519::Public>("Alice"),
+					custodian_account_id.clone(),
 				],
-				Some(master_account_id.clone()),
-				(1, master_account_id.clone(), true, 1),
+				Some(custodian_account_id.clone()),
+				(1, custodian_account_id.clone(), true, 1),
 				(1, "EVERUSD".as_bytes().to_vec(), "EVERUSD".as_bytes().to_vec(), 9),
 				true,
 			)
