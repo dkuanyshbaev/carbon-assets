@@ -6,7 +6,7 @@ use sc_service::ChainType;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{sr25519, Pair, Public};
 use sp_finality_grandpa::AuthorityId as GrandpaId;
-use sp_runtime::traits::{IdentifyAccount, Verify};
+use sp_runtime::{traits::{Verify, IdentifyAccount}, app_crypto::Ss58Codec};
 
 // The URL for the telemetry server.
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -46,22 +46,22 @@ pub fn development_config() -> Result<ChainSpec, String> {
 		"dev",
 		ChainType::Development,
 		move || {
+			let master_account_id: AccountId =
+                Ss58Codec::from_ss58check("5HDgXzA3WG2Dt2Wjif3KKEp2ZFgnD4JWGetSG6U4VLk7UyaF")
+                    .unwrap();
 			testnet_genesis(
 				wasm_binary,
 				// Initial PoA authorities
 				vec![authority_keys_from_seed("Alice")],
 				// Sudo account
-				get_account_id_from_seed::<sr25519::Public>("Alice"),
+				master_account_id.clone(),
 				// Pre-funded accounts
 				vec![
+					master_account_id.clone(),
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
-					get_account_id_from_seed::<sr25519::Public>("Bob"),
-					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Eve"),
 				],
-				Some(get_account_id_from_seed::<sr25519::Public>("Alice")),
-				(1, get_account_id_from_seed::<sr25519::Public>("Alice"), true, 1),
+				Some(master_account_id.clone()),
+				(1, master_account_id.clone(), true, 1),
 				(1, "EVERUSD".as_bytes().to_vec(), "EVERUSD".as_bytes().to_vec(), 9),
 				true,
 			)
