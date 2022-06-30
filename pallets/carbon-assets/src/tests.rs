@@ -1060,6 +1060,37 @@ fn custodian_mint() {
 }
 
 #[test]
+fn custodian_full_circle() {
+	new_test_ext().execute_with(|| {
+		let user1 = 4;
+		let user2 = 5;
+		Balances::make_free_balance_be(&user1, 1000);
+		Balances::make_free_balance_be(&user2, 1000);
+		Balances::make_free_balance_be(&CUSTODIAN, 1000);
+		assert_ok!(Assets::create(Origin::signed(CUSTODIAN), "Token".as_bytes().to_vec(), "Token".as_bytes().to_vec()));
+		let id = Assets::get_current_asset_id(&CUSTODIAN).unwrap();
+		
+		assert_ok!(Assets::set_project_data(
+			Origin::signed(CUSTODIAN), id, vec!['h' as u8,'t' as u8,'t'  as u8 ,'p' as u8],
+			 vec!['4' as u8,'h' as u8,'6' as u8,'g' as u8]));
+			
+		assert_ok!(Assets::mint(Origin::signed(CUSTODIAN), id, 1500));
+		assert_eq!(1500, Assets::balance(id, CUSTODIAN));
+
+		assert_ok!(Assets::transfer(Origin::signed(CUSTODIAN), id, user1, 500));
+		assert_ok!(Assets::transfer(Origin::signed(CUSTODIAN), id, user2, 700));
+
+		assert_ok!(Assets::burn(Origin::signed(CUSTODIAN), id, user1, 100));
+		assert_eq!(400, Assets::balance(id, user1));
+		assert_eq!(Some(100), BurnCertificate::<Test>::get(user1, id));
+
+		assert_ok!(Assets::burn(Origin::signed(CUSTODIAN), id, user2, 100));
+		assert_eq!(600, Assets::balance(id, user2));
+		assert_eq!(Some(100), BurnCertificate::<Test>::get(user2, id));
+	})
+}
+
+#[test]
 fn custodian_burn() {
 	new_test_ext().execute_with(|| {
 		let user = 4;

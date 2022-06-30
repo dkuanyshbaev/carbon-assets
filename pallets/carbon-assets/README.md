@@ -13,9 +13,9 @@ The Carbon Assets module provides functionality for the tokenization of Carbon U
 * **BurnCertificate:**  The storage of amount of carbon assets burned per `AccountId` per `AssetId`. 
 
 ### Tokenization flow
-1. User creates a carbon asset via `create` extrinsic. The name of the asset is generated. Asset decimals are set to 9.
-2. User goes to the external registry and buys and retires/transfers the asset with the generated name. The user receives some kind of public serial number of retirement.
-3. User updates metadata of the asset via `set_project_data` extrinsic. The user should include the serial number from the previous step, amount of carbon units and some project information and store that on ipfs. The metadata is updated with `url` and ipfs link `data_ipfs`.
+1. User creates a carbon asset via `create` extrinsic. The user sets a name and a symbol of the asset. Asset decimals are set to 9. `AssetId` is generated.
+2. User goes to the external registry and buys and retires/transfers the asset with the generated `AssetId` (and maybe name too). The user receives some kind of public serial number of retirement.
+3. User updates metadata of the asset via `set_project_data` extrinsic. The user should include the serial number from the previous step, and some project information and store that on ipfs. The metadata is updated with `url` and ipfs link `data_ipfs`.
 4. Custodian verifies all data via the link from the previous step and `mint` carbon assets to the user's account. 
 5. The user can burn carbon assets that they have (that is what carbon assets are made for) via `self_burn` extrinsic. Then user receives a BurnCertificate. The user can burn a particular carbon asset many times - all changes sum up in the BurnCertificate. The Custodian also can burn carbon assets for the user via `burn` extrinsic. The user also receives a BurnCertificate.
 
@@ -31,7 +31,7 @@ Add Carbon Assets Module to your Cargo.toml dependencies.
 
 ```toml
 [dependencies]
-pallet-carbon-assets = { version = "0.1.0", default-features = false, git = "https://github.com/EvercityEcosystem/carbon-assets.git" }
+pallet-carbon-assets = { version = "0.2.0", default-features = false, git = "https://github.com/EvercityEcosystem/carbon-assets.git" }
 ```
 Also you need some source of `Randomness`, for example `pallet_randomness_collective_flip`.
 
