@@ -288,13 +288,13 @@ fn force_cancel_approval_works() {
 fn lifecycle_should_work() {
 	new_test_ext().execute_with(|| {
 		Balances::make_free_balance_be(&1, 100);
-		assert_ok!(Assets::create(Origin::signed(1)));
-		assert_eq!(Balances::reserved_balance(&1), 87);
+		assert_ok!(Assets::create(Origin::signed(1), "Token".as_bytes().to_vec(), "Token".as_bytes().to_vec()));
+		assert_eq!(Balances::reserved_balance(&1), 12);
 		let id = Assets::get_current_asset_id(&1).unwrap();
 		// assert_eq!(101, id);
 		assert!(Asset::<Test>::contains_key(id));
 
-		assert_eq!(Balances::reserved_balance(&1), 87);
+		assert_eq!(Balances::reserved_balance(&1), 12);
 		assert!(Metadata::<Test>::contains_key(id));
 
 		Balances::make_free_balance_be(&10, 100);
@@ -311,13 +311,13 @@ fn lifecycle_should_work() {
 		assert!(!Metadata::<Test>::contains_key(id));
 		assert_eq!(Account::<Test>::iter_prefix(id).count(), 0);
 
-		assert_ok!(Assets::create(Origin::signed(1)));
+		assert_ok!(Assets::create(Origin::signed(1), "Token".as_bytes().to_vec(), "Token".as_bytes().to_vec()));
 		let second_id = Assets::get_current_asset_id(&1).unwrap();
 		// assert_eq!(102, second_id);
-		assert_eq!(Balances::reserved_balance(&1), 87);
+		assert_eq!(Balances::reserved_balance(&1), 12);
 		assert!(Asset::<Test>::contains_key(second_id));
 
-		assert_eq!(Balances::reserved_balance(&1), 87);
+		assert_eq!(Balances::reserved_balance(&1), 12);
 		assert!(Metadata::<Test>::contains_key(second_id));
 
 		assert_ok!(Assets::mint(Origin::signed(1), second_id, 100));
@@ -552,12 +552,12 @@ fn transfer_owner_should_work() {
 	new_test_ext().execute_with(|| {
 		Balances::make_free_balance_be(&1, 100);
 		Balances::make_free_balance_be(&2, 100);
-		assert_ok!(Assets::create(Origin::signed(1)));
+		assert_ok!(Assets::create(Origin::signed(1), "Token".as_bytes().to_vec(), "Token".as_bytes().to_vec()));
 		let id = Assets::get_current_asset_id(&1).unwrap();
-		assert_eq!(Balances::reserved_balance(&1), 87);
+		assert_eq!(Balances::reserved_balance(&1), 12);
 
 		assert_ok!(Assets::transfer_ownership(Origin::signed(1), id, 2));
-		assert_eq!(Balances::reserved_balance(&2), 87);
+		assert_eq!(Balances::reserved_balance(&2), 12);
 		assert_eq!(Balances::reserved_balance(&1), 0);
 
 		assert_noop!(
@@ -567,7 +567,7 @@ fn transfer_owner_should_work() {
 
 		// Set metadata now and make sure that deposit gets transferred back.
 		assert_ok!(Assets::transfer_ownership(Origin::signed(2), id, 1));
-		assert_eq!(Balances::reserved_balance(&1), 87);
+		assert_eq!(Balances::reserved_balance(&1), 12);
 		assert_eq!(Balances::reserved_balance(&2), 0);
 	});
 }
@@ -797,7 +797,7 @@ fn force_asset_status_should_work() {
 	new_test_ext().execute_with(|| {
 		Balances::make_free_balance_be(&1, 100);
 		Balances::make_free_balance_be(&2, 10);
-		assert_ok!(Assets::create(Origin::signed(1)));
+		assert_ok!(Assets::create(Origin::signed(1), "Token".as_bytes().to_vec(), "Token".as_bytes().to_vec()));
 		let id = Assets::get_current_asset_id(&1).unwrap();
 		assert_ok!(Assets::mint(Origin::signed(1), id, 200));
 		assert_ok!(Assets::transfer(Origin::signed(1), id, 2, 150));
@@ -924,7 +924,7 @@ fn create_asset_with_generated_name() {
 	new_test_ext().execute_with(|| {
 		let user = 4;
 		Balances::make_free_balance_be(&user, 1000);
-		assert_ok!(Assets::create(Origin::signed(user)));
+		assert_ok!(Assets::create(Origin::signed(user), "Token".as_bytes().to_vec(), "Token".as_bytes().to_vec()));
 		let id = Assets::get_current_asset_id(&user).unwrap();
 
 		let metadata = Metadata::<Test>::get(id);
@@ -938,7 +938,7 @@ fn create_asset_ensure_user_cannot_mint() {
 	new_test_ext().execute_with(|| {
 		let user = 4;
 		Balances::make_free_balance_be(&user, 1000);
-		assert_ok!(Assets::create(Origin::signed(user)));
+		assert_ok!(Assets::create(Origin::signed(user), "Token".as_bytes().to_vec(), "Token".as_bytes().to_vec()));
 		let id = Assets::get_current_asset_id(&user).unwrap();
 		
 		assert_noop!(Assets::mint(Origin::signed(user), id, 500), 
@@ -951,7 +951,7 @@ fn set_project_data_by_user() {
 	new_test_ext().execute_with(|| {
 		let user = 4;
 		Balances::make_free_balance_be(&user, 1000);
-		assert_ok!(Assets::create(Origin::signed(user)));
+		assert_ok!(Assets::create(Origin::signed(user), "Token".as_bytes().to_vec(), "Token".as_bytes().to_vec()));
 		let id = Assets::get_current_asset_id(&user).unwrap();
 		
 		assert_ok!(Assets::set_project_data(
@@ -970,7 +970,7 @@ fn set_project_data_by_custodian() {
 	new_test_ext().execute_with(|| {
 		let user = 4;
 		Balances::make_free_balance_be(&user, 1000);
-		assert_ok!(Assets::create(Origin::signed(user)));
+		assert_ok!(Assets::create(Origin::signed(user), "Token".as_bytes().to_vec(), "Token".as_bytes().to_vec()));
 		let id = Assets::get_current_asset_id(&user).unwrap();
 		
 		assert_ok!(Assets::set_project_data(
@@ -989,7 +989,7 @@ fn set_project_data_second_time() {
 	new_test_ext().execute_with(|| {
 		let user = 4;
 		Balances::make_free_balance_be(&user, 1000);
-		assert_ok!(Assets::create(Origin::signed(user)));
+		assert_ok!(Assets::create(Origin::signed(user), "Token".as_bytes().to_vec(), "Token".as_bytes().to_vec()));
 		let id = Assets::get_current_asset_id(&user).unwrap();
 		
 		assert_ok!(Assets::set_project_data(
@@ -1017,7 +1017,7 @@ fn set_project_data_after_mint_fail() {
 	new_test_ext().execute_with(|| {
 		let user = 4;
 		Balances::make_free_balance_be(&user, 1000);
-		assert_ok!(Assets::create(Origin::signed(user)));
+		assert_ok!(Assets::create(Origin::signed(user), "Token".as_bytes().to_vec(), "Token".as_bytes().to_vec()));
 		let id = Assets::get_current_asset_id(&user).unwrap();
 		
 		assert_ok!(Assets::set_project_data(
@@ -1047,7 +1047,7 @@ fn custodian_mint() {
 	new_test_ext().execute_with(|| {
 		let user = 4;
 		Balances::make_free_balance_be(&user, 1000);
-		assert_ok!(Assets::create(Origin::signed(user)));
+		assert_ok!(Assets::create(Origin::signed(user), "Token".as_bytes().to_vec(), "Token".as_bytes().to_vec()));
 		let id = Assets::get_current_asset_id(&user).unwrap();
 		
 		assert_ok!(Assets::set_project_data(
@@ -1064,7 +1064,7 @@ fn custodian_burn() {
 	new_test_ext().execute_with(|| {
 		let user = 4;
 		Balances::make_free_balance_be(&user, 1000);
-		assert_ok!(Assets::create(Origin::signed(user)));
+		assert_ok!(Assets::create(Origin::signed(user), "Token".as_bytes().to_vec(), "Token".as_bytes().to_vec()));
 		let id = Assets::get_current_asset_id(&user).unwrap();
 		
 		assert_ok!(Assets::set_project_data(
@@ -1085,7 +1085,7 @@ fn user_self_burn() {
 	new_test_ext().execute_with(|| {
 		let user = 4;
 		Balances::make_free_balance_be(&user, 1000);
-		assert_ok!(Assets::create(Origin::signed(user)));
+		assert_ok!(Assets::create(Origin::signed(user), "Token".as_bytes().to_vec(), "Token".as_bytes().to_vec()));
 		let id = Assets::get_current_asset_id(&user).unwrap();
 		
 		assert_ok!(Assets::set_project_data(
@@ -1111,7 +1111,7 @@ fn user_cannot_self_burn_more() {
 	new_test_ext().execute_with(|| {
 		let user = 4;
 		Balances::make_free_balance_be(&user, 1000);
-		assert_ok!(Assets::create(Origin::signed(user)));
+		assert_ok!(Assets::create(Origin::signed(user), "Token".as_bytes().to_vec(), "Token".as_bytes().to_vec()));
 		let id = Assets::get_current_asset_id(&user).unwrap();
 		
 		assert_ok!(Assets::set_project_data(
@@ -1138,7 +1138,7 @@ fn custodian_cannot_burn_more() {
 	new_test_ext().execute_with(|| {
 		let user = 4;
 		Balances::make_free_balance_be(&user, 1000);
-		assert_ok!(Assets::create(Origin::signed(user)));
+		assert_ok!(Assets::create(Origin::signed(user), "Token".as_bytes().to_vec(), "Token".as_bytes().to_vec()));
 		let id = Assets::get_current_asset_id(&user).unwrap();
 		
 		assert_ok!(Assets::set_project_data(

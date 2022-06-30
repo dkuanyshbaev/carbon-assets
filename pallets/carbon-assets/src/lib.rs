@@ -560,7 +560,10 @@ pub mod pallet {
 		/// This new asset class has no assets initially and its owner is the origin.
 		///
 		/// The origin must be Signed and the sender must have sufficient funds free.
-		///
+		/// 
+		/// - `name`: The user friendly name of this asset. Limited in length by `StringLimit`.
+		/// - `symbol`: The exchange symbol for this asset. Limited in length by `StringLimit`.
+		/// 
 		/// Funds of sender are reserved by `AssetDeposit`.
 		/// 
 		/// Admin of asset is the Custodian. Fails if no custodian are set.
@@ -572,6 +575,8 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::create())]
 		pub fn create(
 			origin: OriginFor<T>,
+			name: Vec<u8>,
+			symbol: Vec<u8>,
 		) -> DispatchResult {
 			let owner = ensure_signed(origin)?;
 			let admin_option = Custodian::<T, I>::get();
@@ -600,8 +605,7 @@ pub mod pallet {
 				},
 			);
 			Self::deposit_event(Event::Created { asset_id: id, creator: owner.clone() });
-			let name = Self::construct_carbon_asset_name(&owner);
-			let symbol = Self::construct_carbon_asset_symbol(&owner);
+
 			Self::do_set_metadata(id, &owner, name, symbol, 9)
 		}
 
