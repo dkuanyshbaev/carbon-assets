@@ -110,31 +110,31 @@ use std::{cell::RefCell, collections::HashMap};
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub(crate) enum Hook {
-	Died(u64, u64),
+	Died(AssetId, u64),
 }
 thread_local! {
-	static FROZEN: RefCell<HashMap<(u64, u64), u64>> = RefCell::new(Default::default());
+	static FROZEN: RefCell<HashMap<(AssetId, u64), u64>> = RefCell::new(Default::default());
 	static HOOKS: RefCell<Vec<Hook>> = RefCell::new(Default::default());
 }
 
 pub struct TestFreezer;
-impl FrozenBalance<u64, u64, u64> for TestFreezer {
-	fn frozen_balance(asset: u64, who: &u64) -> Option<u64> {
+impl FrozenBalance<AssetId, u64, u64> for TestFreezer {
+	fn frozen_balance(asset: AssetId, who: &u64) -> Option<u64> {
 		FROZEN.with(|f| f.borrow().get(&(asset, who.clone())).cloned())
 	}
 
-	fn died(asset: u64, who: &u64) {
+	fn died(asset: AssetId, who: &u64) {
 		HOOKS.with(|h| h.borrow_mut().push(Hook::Died(asset, who.clone())));
 		// Sanity check: dead accounts have no balance.
 		assert!(Assets::balance(asset, *who).is_zero());
 	}
 }
 
-pub(crate) fn set_frozen_balance(asset: u64, who: u64, amount: u64) {
+pub(crate) fn set_frozen_balance(asset: AssetId, who: u64, amount: u64) {
 	FROZEN.with(|f| f.borrow_mut().insert((asset, who), amount));
 }
 
-pub(crate) fn clear_frozen_balance(asset: u64, who: u64) {
+pub(crate) fn clear_frozen_balance(asset: AssetId, who: u64) {
 	FROZEN.with(|f| f.borrow_mut().remove(&(asset, who)));
 }
 
@@ -146,6 +146,8 @@ pub(crate) fn take_hooks() -> Vec<Hook> {
 	HOOKS.with(|h| h.take())
 }
 
+pub const PREEXIST_ASSET: [u8; 24] = [99u8; 24];
+
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
@@ -153,15 +155,15 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 		custodian: Some(CUSTODIAN),
 		assets: vec![
 			// id, owner, is_sufficient, min_balance
-			(999, 0, true, 1),
+			(PREEXIST_ASSET, 0, true, 1),
 		],
 		metadata: vec![
 			// id, name, symbol, decimals
-			(999, "Token Name".into(), "TOKEN".into(), 10),
+			(PREEXIST_ASSET, "Token Name".into(), "TOKEN".into(), 10),
 		],
 		accounts: vec![
 			// id, account_id, balance
-			(999, 1, 100),
+			(PREEXIST_ASSET, 1, 100),
 		],
 	};
 

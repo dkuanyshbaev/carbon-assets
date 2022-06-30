@@ -963,4 +963,19 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
 		Ok(result)
 	}
+
+	#[cfg(test)]
+	pub(super) fn get_current_asset_id(account: &T::AccountId) -> Result<AssetId, DispatchError> {
+		let id = LastNonce::<T, I>::get();
+		let seed = (account, <frame_system::Pallet<T>>::extrinsic_index()).encode();
+		let (rand, _block) = T::Randomness::random(&seed);
+		let rand_: [u8; 16] = codec::Encode::using_encoded(&rand, sp_io::hashing::blake2_128);
+
+		let res: Result<[u8; 24], _> = [rand_.as_slice(), id.to_be_bytes().as_slice()].concat().try_into();
+		ensure!(res.is_ok(), Error::<T,I>::ErrorCreatingAssetId);
+		let result: [u8; 24] = res.unwrap();
+
+		Ok(result)
+	}
+
 }
