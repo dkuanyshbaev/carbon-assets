@@ -64,14 +64,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		Asset::<T, I>::get(id).map(|x| x.supply)
 	}
 
-	// Additional logic
 
-	pub(super) fn get_new_asset_id() -> Result<AssetId, DispatchError> {
-		let id = LastAssetId::<T, I>::get();
-		let new_id = id.checked_add(1).ok_or(ArithmeticError::Overflow)?;
-		LastAssetId::<T, I>::put(new_id);
-		Ok(new_id)
-	}
 
 	pub(super) fn new_account(
 		who: &T::AccountId,
@@ -927,6 +920,15 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		})	
 	}
 
+	// Additional logic
+
+	// pub(super) fn get_new_asset_id() -> Result<AssetId, DispatchError> {
+	// 	let id = LastAssetId::<T, I>::get();
+	// 	let new_id = id.checked_add(1).ok_or(ArithmeticError::Overflow)?;
+	// 	LastAssetId::<T, I>::put(new_id);
+	// 	Ok(new_id)
+	// }
+
 	pub fn construct_carbon_asset_name(account: &T::AccountId) -> Vec<u8> {
         let evercity_prefix = "EVERCITY-CO2-".as_bytes().to_vec();
 		let random_id = Self::get_random_id(account);
@@ -945,5 +947,20 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		// let rand16: [u8; 16] = codec::Encode::using_encoded(&rand, sp_io::hashing::blake2_128);
 		
 		rand.as_ref().to_vec()
+	}
+
+	pub(super) fn get_new_asset_id(account: &T::AccountId) -> Result<AssetId, DispatchError> {
+		let id = LastNonce::<T, I>::get();
+		let new_id = id.checked_add(1).ok_or(ArithmeticError::Overflow)?;
+		LastNonce::<T, I>::put(new_id);
+		let seed = (account, <frame_system::Pallet<T>>::extrinsic_index()).encode();
+		let (rand, _block) = T::Randomness::random(&seed);
+		let rand_: [u8; 16] = codec::Encode::using_encoded(&rand, sp_io::hashing::blake2_128);
+
+		let res: Result<[u8; 24], _> = [rand_.as_slice(), new_id.to_be_bytes().as_slice()].concat().try_into();
+		ensure!(res.is_ok(), Error::<T,I>::ErrorCreatingAssetId);
+		let result: [u8; 24] = res.unwrap();
+
+		Ok(result)
 	}
 }

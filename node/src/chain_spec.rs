@@ -58,15 +58,19 @@ pub fn development_config() -> Result<ChainSpec, String> {
 				// Initial PoA authorities
 				vec![authority_keys_from_seed("Alice")],
 				// Sudo account
-				master_account_id.clone(),
+				get_account_id_from_seed::<sr25519::Public>("Alice"),
 				// Pre-funded accounts
 				vec![
+					get_account_id_from_seed::<sr25519::Public>("Alice"),
+					get_account_id_from_seed::<sr25519::Public>("Bob"),
+					get_account_id_from_seed::<sr25519::Public>("Charlie"),
+					get_account_id_from_seed::<sr25519::Public>("Dave"),
+					get_account_id_from_seed::<sr25519::Public>("Eve"),
+					get_account_id_from_seed::<sr25519::Public>("Ferdie"),
 					master_account_id.clone(),
 					custodian_account_id.clone(),
 				],
-				Some(custodian_account_id.clone()),
-				(1, custodian_account_id.clone(), true, 1),
-				(1, "EVERUSD".as_bytes().to_vec(), "EVERUSD".as_bytes().to_vec(), 9),
+				Some(get_account_id_from_seed::<sr25519::Public>("Alice")),
 				true,
 			)
 		},
@@ -116,8 +120,6 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 				],
 				Some(get_account_id_from_seed::<sr25519::Public>("Alice")),
-				(1, get_account_id_from_seed::<sr25519::Public>("Alice"), true, 1),
-				(1, "EVERUSD".as_bytes().to_vec(), "EVERUSD".as_bytes().to_vec(), 9),
 				true,
 			)
 		},
@@ -142,8 +144,6 @@ fn testnet_genesis(
 	root_key: AccountId,
 	endowed_accounts: Vec<AccountId>,
 	custodian: Option<AccountId>,
-	everusd_asset: (u64, AccountId, bool, Balance),
-	everusd_metadata: (u64, Vec<u8>, Vec<u8>, u8),
 	_enable_println: bool,
 ) -> GenesisConfig {
 	GenesisConfig {
@@ -168,8 +168,8 @@ fn testnet_genesis(
 		transaction_payment: Default::default(),
 		carbon_assets: CarbonAssetsConfig {
 			custodian,
-			assets: vec![everusd_asset],
-			metadata: vec![everusd_metadata],
+			assets: Vec::new(),
+			metadata: Vec::new(),
 			accounts: Vec::new(),
 		}
 	}

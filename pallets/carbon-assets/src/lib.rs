@@ -159,7 +159,6 @@ use frame_system::Config as SystemConfig;
 
 pub use pallet::*;
 pub use weights::WeightInfo;
-pub type AssetId = u64;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -307,16 +306,15 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn get_last_id)]
 	/// Last created AssetId
-	pub(super) type LastAssetId<T: Config<I>, I: 'static = ()> = StorageValue<
+	pub(super) type LastNonce<T: Config<I>, I: 'static = ()> = StorageValue<
 		_,
-		AssetId,
+		u64,
 		ValueQuery,
-		InitialAssetId
+		InitialNonce
 	>;
 
 	#[pallet::type_value]
-	pub(super) fn InitialAssetId() -> AssetId { 100u64 }
-	// pub(super) fn InitialAssetId<T: Config<I>, I: 'static>() -> AssetId { 100u64 }
+	pub(super) fn InitialNonce() -> u64 { 100 }
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config<I>, I: 'static = ()> {
@@ -530,6 +528,8 @@ pub mod pallet {
 		NoMetadata,
 		/// Project data cannot be changed after minting.
 		CannotChangeAfterMint,
+		/// Error creating AssetId
+		ErrorCreatingAssetId,
 	}
 
 	#[pallet::call]
@@ -577,7 +577,7 @@ pub mod pallet {
 			let admin_option = Custodian::<T, I>::get();
 			ensure!(admin_option.is_some(), Error::<T, I>::NoCustodian);
 			let admin = admin_option.unwrap();
-			let id = Self::get_new_asset_id()?;
+			let id = Self::get_new_asset_id(&owner)?;
 
 			let deposit = T::AssetDeposit::get();
 			T::Currency::reserve(&owner, deposit)?;
@@ -648,7 +648,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::force_create())]
 		pub fn force_create(
 			origin: OriginFor<T>,
-			#[pallet::compact] id: AssetId,
+			id: AssetId,
 			owner: <T::Lookup as StaticLookup>::Source,
 			is_sufficient: bool,
 			#[pallet::compact] min_balance: T::Balance,
@@ -683,7 +683,7 @@ pub mod pallet {
  		))]
 		pub fn destroy(
 			origin: OriginFor<T>,
-			#[pallet::compact] id: AssetId,
+			id: AssetId,
 			witness: DestroyWitness,
 		) -> DispatchResultWithPostInfo {
 			let maybe_check_owner = match T::ForceOrigin::try_origin(origin) {
@@ -713,7 +713,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::mint())]
 		pub fn mint(
 			origin: OriginFor<T>,
-			#[pallet::compact] id: AssetId,
+			id: AssetId,
 			#[pallet::compact] amount: T::Balance,
 		) -> DispatchResult {
 			let origin = ensure_signed(origin)?;
@@ -745,7 +745,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::burn())]
 		pub fn burn(
 			origin: OriginFor<T>,
-			#[pallet::compact] id: AssetId,
+			id: AssetId,
 			who: <T::Lookup as StaticLookup>::Source,
 			#[pallet::compact] amount: T::Balance,
 		) -> DispatchResult {
@@ -788,7 +788,7 @@ pub mod pallet {
 		#[pallet::weight(10_000_000 + T::DbWeight::get().reads_writes(3,3))]
 		pub fn self_burn(
 			origin: OriginFor<T>,
-			#[pallet::compact] id: AssetId,
+			id: AssetId,
 			#[pallet::compact] amount: T::Balance,
 		) -> DispatchResult {
 			let caller = ensure_signed(origin)?;
@@ -834,7 +834,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::transfer())]
 		pub fn transfer(
 			origin: OriginFor<T>,
-			#[pallet::compact] id: AssetId,
+			id: AssetId,
 			target: <T::Lookup as StaticLookup>::Source,
 			#[pallet::compact] amount: T::Balance,
 		) -> DispatchResult {
@@ -866,7 +866,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::transfer_keep_alive())]
 		pub fn transfer_keep_alive(
 			origin: OriginFor<T>,
-			#[pallet::compact] id: AssetId,
+			id: AssetId,
 			target: <T::Lookup as StaticLookup>::Source,
 			#[pallet::compact] amount: T::Balance,
 		) -> DispatchResult {
@@ -899,7 +899,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::force_transfer())]
 		pub fn force_transfer(
 			origin: OriginFor<T>,
-			#[pallet::compact] id: AssetId,
+			id: AssetId,
 			source: <T::Lookup as StaticLookup>::Source,
 			dest: <T::Lookup as StaticLookup>::Source,
 			#[pallet::compact] amount: T::Balance,
@@ -925,7 +925,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::freeze())]
 		pub fn freeze(
 			origin: OriginFor<T>,
-			#[pallet::compact] id: AssetId,
+			id: AssetId,
 			who: <T::Lookup as StaticLookup>::Source,
 		) -> DispatchResult {
 			let origin = ensure_signed(origin)?;
@@ -956,7 +956,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::thaw())]
 		pub fn thaw(
 			origin: OriginFor<T>,
-			#[pallet::compact] id: AssetId,
+			id: AssetId,
 			who: <T::Lookup as StaticLookup>::Source,
 		) -> DispatchResult {
 			let origin = ensure_signed(origin)?;
@@ -986,7 +986,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::freeze_asset())]
 		pub fn freeze_asset(
 			origin: OriginFor<T>,
-			#[pallet::compact] id: AssetId,
+			id: AssetId,
 		) -> DispatchResult {
 			let origin = ensure_signed(origin)?;
 
@@ -1013,7 +1013,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::thaw_asset())]
 		pub fn thaw_asset(
 			origin: OriginFor<T>,
-			#[pallet::compact] id: AssetId,
+			id: AssetId,
 		) -> DispatchResult {
 			let origin = ensure_signed(origin)?;
 
@@ -1041,7 +1041,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::transfer_ownership())]
 		pub fn transfer_ownership(
 			origin: OriginFor<T>,
-			#[pallet::compact] id: AssetId,
+			id: AssetId,
 			owner: <T::Lookup as StaticLookup>::Source,
 		) -> DispatchResult {
 			let origin = ensure_signed(origin)?;
@@ -1084,7 +1084,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::force_set_metadata(name.len() as u32, symbol.len() as u32))]
 		pub fn force_set_metadata(
 			origin: OriginFor<T>,
-			#[pallet::compact] id: AssetId,
+			id: AssetId,
 			name: Vec<u8>,
 			symbol: Vec<u8>,
 			url: Vec<u8>,
@@ -1148,7 +1148,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::force_clear_metadata())]
 		pub fn force_clear_metadata(
 			origin: OriginFor<T>,
-			#[pallet::compact] id: AssetId,
+			id: AssetId,
 		) -> DispatchResult {
 			T::ForceOrigin::ensure_origin(origin)?;
 
@@ -1186,7 +1186,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::force_asset_status())]
 		pub fn force_asset_status(
 			origin: OriginFor<T>,
-			#[pallet::compact] id: AssetId,
+			id: AssetId,
 			owner: <T::Lookup as StaticLookup>::Source,
 			issuer: <T::Lookup as StaticLookup>::Source,
 			admin: <T::Lookup as StaticLookup>::Source,
@@ -1236,7 +1236,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::approve_transfer())]
 		pub fn approve_transfer(
 			origin: OriginFor<T>,
-			#[pallet::compact] id: AssetId,
+			id: AssetId,
 			delegate: <T::Lookup as StaticLookup>::Source,
 			#[pallet::compact] amount: T::Balance,
 		) -> DispatchResult {
@@ -1261,7 +1261,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::cancel_approval())]
 		pub fn cancel_approval(
 			origin: OriginFor<T>,
-			#[pallet::compact] id: AssetId,
+			id: AssetId,
 			delegate: <T::Lookup as StaticLookup>::Source,
 		) -> DispatchResult {
 			let owner = ensure_signed(origin)?;
@@ -1294,7 +1294,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::force_cancel_approval())]
 		pub fn force_cancel_approval(
 			origin: OriginFor<T>,
-			#[pallet::compact] id: AssetId,
+			id: AssetId,
 			owner: <T::Lookup as StaticLookup>::Source,
 			delegate: <T::Lookup as StaticLookup>::Source,
 		) -> DispatchResult {
@@ -1341,7 +1341,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::transfer_approved())]
 		pub fn transfer_approved(
 			origin: OriginFor<T>,
-			#[pallet::compact] id: AssetId,
+			id: AssetId,
 			owner: <T::Lookup as StaticLookup>::Source,
 			destination: <T::Lookup as StaticLookup>::Source,
 			#[pallet::compact] amount: T::Balance,
@@ -1362,7 +1362,7 @@ pub mod pallet {
 		///
 		/// Emits `Touched` event when successful.
 		#[pallet::weight(T::WeightInfo::mint())]
-		pub fn touch(origin: OriginFor<T>, #[pallet::compact] id: AssetId) -> DispatchResult {
+		pub fn touch(origin: OriginFor<T>, id: AssetId) -> DispatchResult {
 			Self::do_touch(id, ensure_signed(origin)?)
 		}
 
@@ -1377,7 +1377,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::mint())]
 		pub fn refund(
 			origin: OriginFor<T>,
-			#[pallet::compact] id: AssetId,
+			id: AssetId,
 			allow_burn: bool,
 		) -> DispatchResult {
 			Self::do_refund(id, ensure_signed(origin)?, allow_burn)

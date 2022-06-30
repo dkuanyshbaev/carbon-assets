@@ -20,7 +20,7 @@
 use super::*;
 
 impl<T: Config<I>, I: 'static> fungibles::Inspect<<T as SystemConfig>::AccountId> for Pallet<T, I> {
-	type AssetId = u64;
+	type AssetId = types::AssetId;
 	type Balance = T::Balance;
 
 	fn total_issuance(asset: AssetId) -> Self::Balance {
