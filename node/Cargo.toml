@@ -1,6 +1,6 @@
 [package]
 name = "node-template"
-version = "4.0.2"
+version = "4.0.3"
 description = "A fresh FRAME-based Substrate node, ready for hacking."
 authors = ["Substrate DevHub <https://github.com/substrate-developer-hub>"]
 homepage = "https://substrate.io/"
@@ -57,7 +57,7 @@ frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", bran
 frame-benchmarking-cli = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
 
 # Local Dependencies
-node-template-runtime = { version = "4.0.1", path = "../runtime" }
+node-template-runtime = { version = "4.0.2", path = "../runtime" }
 
 # CLI-specific dependencies
 try-runtime-cli = { optional = true, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.24" }
