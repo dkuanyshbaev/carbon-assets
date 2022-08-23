@@ -24,6 +24,10 @@ The Carbon Assets module provides functionality for the tokenization of Carbon U
 4. Custodian verifies all data via the link from the previous step and `mint` carbon assets to the user's account. 
 5. The user can burn carbon assets that they have (that is what carbon assets are made for) via `self_burn` extrinsic. Then user receives a BurnCertificate. The user can burn a particular carbon asset many times - all changes sum up in the BurnCertificate. The Custodian also can burn carbon assets for the user via `burn` extrinsic. The user also receives a BurnCertificate.
 
+### UI
+
+Here's a repo with source code of a dApp for tokenization flow above: https://github.com/EvercityEcosystem/carbon-dapp
+
 ## Interface
 
 ### Dispatchable Functions
