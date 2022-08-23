@@ -12,6 +12,11 @@ The Carbon Assets module provides functionality for the tokenization of Carbon U
 * **Carbon Asset burning:** Burn of tokenized carbon asset. The owner receives Burn Certificate.
 * **BurnCertificate:**  The storage of amount of carbon assets burned per `AccountId` per `AssetId`. 
 
+### Basic flow configuration
+
+1. It's necessary to setup custodian for minting assets. Use sudo `set_custodian` extrinsic to some address
+2. Don't forget to replenish balances of addresses which will hold assets (even those where you're going to transfer to)
+
 ### Tokenization flow
 1. User creates a carbon asset via `create` extrinsic. The user sets a name and a symbol of the asset. Asset decimals are set to 9. `AssetId` is generated.
 2. User goes to the external registry and buys and retires/transfers the asset with the generated `AssetId` (and maybe name too). The user receives some kind of public serial number of retirement.
