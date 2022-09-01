@@ -922,33 +922,6 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
 	// Additional logic
 
-	// pub(super) fn get_new_asset_id() -> Result<AssetId, DispatchError> {
-	// 	let id = LastAssetId::<T, I>::get();
-	// 	let new_id = id.checked_add(1).ok_or(ArithmeticError::Overflow)?;
-	// 	LastAssetId::<T, I>::put(new_id);
-	// 	Ok(new_id)
-	// }
-
-	pub fn construct_carbon_asset_name(account: &T::AccountId) -> Vec<u8> {
-        let evercity_prefix = "EVERCITY-CO2-".as_bytes().to_vec();
-		let random_id = Self::get_random_id(account);
-		[evercity_prefix, random_id].concat()
-    }
-
-    pub fn construct_carbon_asset_symbol(account: &T::AccountId) -> Vec<u8> {
-        let evercity_prefix = "EVR-CO2-".as_bytes().to_vec();
-		let random_id = Self::get_random_id(account);
-		[evercity_prefix, random_id].concat()
-    }
-
-	pub fn get_random_id(account: &T::AccountId) -> Vec<u8> {
-		let seed = (account, <frame_system::Pallet<T>>::extrinsic_index()).encode();
-		let (rand, _block) = T::Randomness::random(&seed);
-		// let rand16: [u8; 16] = codec::Encode::using_encoded(&rand, sp_io::hashing::blake2_128);
-		
-		rand.as_ref().to_vec()
-	}
-
 	pub(super) fn get_new_asset_id(account: &T::AccountId) -> Result<AssetId, DispatchError> {
 		let id = LastNonce::<T, I>::get();
 		let new_id = id.checked_add(1).ok_or(ArithmeticError::Overflow)?;
@@ -964,7 +937,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		Ok(result)
 	}
 
-	#[cfg(test)]
+	#[cfg(any(test, feature = "runtime-benchmarks"))]
 	pub(super) fn get_current_asset_id(account: &T::AccountId) -> Result<AssetId, DispatchError> {
 		let id = LastNonce::<T, I>::get();
 		let seed = (account, <frame_system::Pallet<T>>::extrinsic_index()).encode();

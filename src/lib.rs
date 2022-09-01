@@ -642,7 +642,7 @@ pub mod pallet {
 		/// an existing asset.
 		/// - `owner`: The owner of this class of assets. The owner has full superuser permissions
 		/// over this asset, but may later change and configure the permissions using
-		/// `transfer_ownership` and `set_team`.
+		/// `transfer_ownership`.
 		/// - `min_balance`: The minimum balance of this new asset that any single account must
 		/// have. If an account's balance is reduced below this, then it collapses to zero.
 		///

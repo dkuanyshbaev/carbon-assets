@@ -40,6 +40,7 @@ fn create_default_asset<T: Config<I>, I: 'static>(
 ) -> (T::AccountId, <T::Lookup as StaticLookup>::Source) {
 	let caller: T::AccountId = whitelisted_caller();
 	let caller_lookup = T::Lookup::unlookup(caller.clone());
+	T::Currency::make_free_balance_be(&caller, T::Currency::minimum_balance());
 	let root = SystemOrigin::Root.into();
 	assert!(Assets::<T, I>::force_create(
 		root,
@@ -63,7 +64,6 @@ fn create_default_minted_asset<T: Config<I>, I: 'static>(
 	assert!(Assets::<T, I>::mint(
 		SystemOrigin::Signed(caller.clone()).into(),
 		Default::default(),
-		caller_lookup.clone(),
 		amount,
 	)
 	.is_ok());
@@ -89,8 +89,14 @@ fn add_consumers<T: Config<I>, I: 'static>(minter: T::AccountId, n: u32) {
 		assert!(Assets::<T, I>::mint(
 			origin.clone().into(),
 			Default::default(),
-			target_lookup,
 			100u32.into()
+		)
+		.is_ok());
+		assert!(Assets::<T, I>::transfer(
+			origin.clone().into(),
+			Default::default(),
+			target_lookup,
+			90u32.into()
 		)
 		.is_ok());
 	}
@@ -107,8 +113,14 @@ fn add_sufficients<T: Config<I>, I: 'static>(minter: T::AccountId, n: u32) {
 		assert!(Assets::<T, I>::mint(
 			origin.clone().into(),
 			Default::default(),
-			target_lookup,
 			100u32.into()
+		)
+		.is_ok());
+		assert!(Assets::<T, I>::transfer(
+			origin.clone().into(),
+			Default::default(),
+			target_lookup,
+			90u32.into()
 		)
 		.is_ok());
 	}
@@ -117,12 +129,11 @@ fn add_sufficients<T: Config<I>, I: 'static>(minter: T::AccountId, n: u32) {
 
 fn add_approvals<T: Config<I>, I: 'static>(minter: T::AccountId, n: u32) {
 	T::Currency::deposit_creating(&minter, T::ApprovalDeposit::get() * n.into());
-	let minter_lookup = T::Lookup::unlookup(minter.clone());
+	let _minter_lookup = T::Lookup::unlookup(minter.clone());
 	let origin = SystemOrigin::Signed(minter);
 	Assets::<T, I>::mint(
 		origin.clone().into(),
 		Default::default(),
-		minter_lookup,
 		(100 * (n + 1)).into(),
 	)
 	.unwrap();
@@ -153,9 +164,11 @@ benchmarks_instance_pallet! {
 		let caller: T::AccountId = whitelisted_caller();
 		let caller_lookup = T::Lookup::unlookup(caller.clone());
 		T::Currency::make_free_balance_be(&caller, DepositBalanceOf::<T, I>::max_value());
-	}: _(SystemOrigin::Signed(caller.clone()), Default::default(), caller_lookup, 1u32.into())
+	}: _(SystemOrigin::Signed(caller.clone()), Default::default(), Default::default())
 	verify {
-		assert_last_event::<T, I>(Event::Created { asset_id: Default::default(), creator: caller.clone(), owner: caller }.into());
+		let id = Assets::<T, I>::get_current_asset_id(&caller).unwrap();
+		assert_last_event::<T, I>(Event::MetadataSet { 
+			asset_id: id, name: Default::default(), symbol: Default::default(), decimals: 9, is_frozen: false }.into());
 	}
 
 	force_create {
@@ -183,7 +196,7 @@ benchmarks_instance_pallet! {
 	mint {
 		let (caller, caller_lookup) = create_default_asset::<T, I>(true);
 		let amount = T::Balance::from(100u32);
-	}: _(SystemOrigin::Signed(caller.clone()), Default::default(), caller_lookup, amount)
+	}: _(SystemOrigin::Signed(caller.clone()), Default::default(), amount)
 	verify {
 		assert_last_event::<T, I>(Event::Issued { asset_id: Default::default(), owner: caller, total_supply: amount }.into());
 	}
@@ -193,7 +206,7 @@ benchmarks_instance_pallet! {
 		let (caller, caller_lookup) = create_default_minted_asset::<T, I>(true, amount);
 	}: _(SystemOrigin::Signed(caller.clone()), Default::default(), caller_lookup, amount)
 	verify {
-		assert_last_event::<T, I>(Event::Burned { asset_id: Default::default(), owner: caller, balance: amount }.into());
+		assert_last_event::<T, I>(Event::CarbonCreditsBurned { account: caller, asset_id: Default::default(), amount }.into());
 	}
 
 	transfer {
@@ -276,54 +289,14 @@ benchmarks_instance_pallet! {
 		assert_last_event::<T, I>(Event::OwnerChanged { asset_id: Default::default(), owner: target }.into());
 	}
 
-	set_team {
-		let (caller, _) = create_default_asset::<T, I>(true);
-		let target0 = T::Lookup::unlookup(account("target", 0, SEED));
-		let target1 = T::Lookup::unlookup(account("target", 1, SEED));
-		let target2 = T::Lookup::unlookup(account("target", 2, SEED));
-	}: _(SystemOrigin::Signed(caller), Default::default(), target0, target1, target2)
-	verify {
-		assert_last_event::<T, I>(Event::TeamChanged {
-			asset_id: Default::default(),
-			issuer: account("target", 0, SEED),
-			admin: account("target", 1, SEED),
-			freezer: account("target", 2, SEED),
-		}.into());
-	}
-
-	set_metadata {
-		let n in 0 .. T::StringLimit::get();
-		let s in 0 .. T::StringLimit::get();
-
-		let name = vec![0u8; n as usize];
-		let symbol = vec![0u8; s as usize];
-		let decimals = 12;
-
-		let (caller, _) = create_default_asset::<T, I>(true);
-		T::Currency::make_free_balance_be(&caller, DepositBalanceOf::<T, I>::max_value());
-	}: _(SystemOrigin::Signed(caller), Default::default(), name.clone(), symbol.clone(), decimals)
-	verify {
-		let id = Default::default();
-		assert_last_event::<T, I>(Event::MetadataSet { asset_id: id, name, symbol, decimals, is_frozen: false }.into());
-	}
-
-	clear_metadata {
-		let (caller, _) = create_default_asset::<T, I>(true);
-		T::Currency::make_free_balance_be(&caller, DepositBalanceOf::<T, I>::max_value());
-		let dummy = vec![0u8; T::StringLimit::get() as usize];
-		let origin = SystemOrigin::Signed(caller.clone()).into();
-		Assets::<T, I>::set_metadata(origin, Default::default(), dummy.clone(), dummy, 12)?;
-	}: _(SystemOrigin::Signed(caller), Default::default())
-	verify {
-		assert_last_event::<T, I>(Event::MetadataCleared { asset_id: Default::default() }.into());
-	}
-
 	force_set_metadata {
 		let n in 0 .. T::StringLimit::get();
 		let s in 0 .. T::StringLimit::get();
 
 		let name = vec![0u8; n as usize];
 		let symbol = vec![0u8; s as usize];
+		let url = vec![0u8; n as usize];
+		let data_ipfs = vec![0u8; s as usize];
 		let decimals = 12;
 
 		create_default_asset::<T, I>(true);
@@ -333,21 +306,23 @@ benchmarks_instance_pallet! {
 			id: Default::default(),
 			name: name.clone(),
 			symbol: symbol.clone(),
+			url: url.clone(), 
+			data_ipfs: data_ipfs.clone(),
 			decimals,
 			is_frozen: false,
 		};
 	}: { call.dispatch_bypass_filter(origin)? }
 	verify {
 		let id = Default::default();
-		assert_last_event::<T, I>(Event::MetadataSet { asset_id: id, name, symbol, decimals, is_frozen: false }.into());
+		assert_last_event::<T, I>(Event::MetadataUpdated { asset_id: id, url, data_ipfs }.into());
 	}
 
 	force_clear_metadata {
 		let (caller, _) = create_default_asset::<T, I>(true);
 		T::Currency::make_free_balance_be(&caller, DepositBalanceOf::<T, I>::max_value());
 		let dummy = vec![0u8; T::StringLimit::get() as usize];
-		let origin = SystemOrigin::Signed(caller).into();
-		Assets::<T, I>::set_metadata(origin, Default::default(), dummy.clone(), dummy, 12)?;
+		Assets::<T, I>::force_set_metadata(SystemOrigin::Root.into(), 
+			Default::default(), dummy.clone(),dummy.clone(),dummy.clone(), dummy, 12, false)?;
 
 		let origin = T::ForceOrigin::successful_origin();
 		let call = Call::<T, I>::force_clear_metadata { id: Default::default() };
