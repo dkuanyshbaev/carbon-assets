@@ -544,7 +544,7 @@ pub mod pallet {
 		/// 
 		/// Emits `CustodianSet` when successful.
 		/// 
-		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1, 1))]
+		#[pallet::weight(T::WeightInfo::set_custodian())]
 		pub fn set_custodian(
 			origin: OriginFor<T>,
 			custodian: T::AccountId
@@ -619,7 +619,7 @@ pub mod pallet {
 		/// 
 		/// Emits `MetadataUpdated`.
 		/// 
-		#[pallet::weight(10_000_000 + T::DbWeight::get().reads_writes(1,1))]
+		#[pallet::weight(T::WeightInfo::set_project_data())]
 		pub fn set_project_data(
 			origin: OriginFor<T>,
 			id: AssetId,
@@ -789,7 +789,7 @@ pub mod pallet {
 		///
 		/// Weight: `O(1)`
 		/// Modes: Post-existence of `who`; Pre & post Zombie-status of `who`.
-		#[pallet::weight(10_000_000 + T::DbWeight::get().reads_writes(3,3))]
+		#[pallet::weight(T::WeightInfo::burn())]
 		pub fn self_burn(
 			origin: OriginFor<T>,
 			id: AssetId,

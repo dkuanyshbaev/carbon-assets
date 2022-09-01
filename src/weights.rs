@@ -44,7 +44,9 @@ use sp_std::marker::PhantomData;
 
 /// Weight functions needed for pallet_assets.
 pub trait WeightInfo {
+	fn set_custodian() -> Weight;
 	fn create() -> Weight;
+	fn set_project_data() -> Weight;
 	fn force_create() -> Weight;
 	fn destroy(c: u32, s: u32, a: u32, ) -> Weight;
 	fn mint() -> Weight;
@@ -72,6 +74,11 @@ pub trait WeightInfo {
 /// Weights for pallet_assets using the Substrate node and recommended hardware.
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
+	fn set_custodian() -> Weight {
+		(23_081_000 as Weight) 
+			.saturating_add(T::DbWeight::get().reads(1 as Weight))
+			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+	}
 	// Storage: Assets Asset (r:1 w:1)
 	// Storage: Assets Metadata (r:1 w:1)
 	fn create() -> Weight {
@@ -80,6 +87,11 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 		+(27_805_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
+			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+	}
+	fn set_project_data() -> Weight {
+		(27_805_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(2 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
 	// Storage: Assets Asset (r:1 w:1)
@@ -256,10 +268,23 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
+	fn set_custodian() -> Weight {
+		(23_081_000 as Weight)
+			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
+			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+	}
 	// Storage: Assets Asset (r:1 w:1)
 	fn create() -> Weight {
 		(23_081_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
+			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		+(27_805_000 as Weight)
+			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
+			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+	}
+	fn set_project_data() -> Weight {
+		(27_805_000 as Weight)
+			.saturating_add(RocksDbWeight::get().reads(2 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
 	}
 	// Storage: Assets Asset (r:1 w:1)
