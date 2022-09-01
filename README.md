@@ -40,7 +40,7 @@ Add Carbon Assets Module to your Cargo.toml dependencies.
 
 ```toml
 [dependencies]
-pallet-carbon-assets = { version = "0.2.0", default-features = false, git = "https://github.com/EvercityEcosystem/carbon-assets.git" }
+pallet-carbon-assets = { version = "0.2.1", default-features = false, git = "https://github.com/EvercityEcosystem/carbon-assets.git" }
 ```
 Also you need some source of `Randomness`, for example `pallet_randomness_collective_flip`.
 
