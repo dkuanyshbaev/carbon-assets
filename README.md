@@ -91,6 +91,38 @@ impl pallet_carbon_assets::Config for Runtime {
 	type Randomness = RandomnessCollectiveFlip;
 }
 ```
+Configure GenesisConfig in `node/src/chain_spec.rs` - set Alice as custodian for testnet (or use custom account):
+
+```rust
+use node_template_runtime::{
+	AccountId, AuraConfig, ... WASM_BINARY, CarbonAssetsConfig,
+};
+
+...
+/// Configure initial storage state for FRAME modules.
+fn testnet_genesis(
+	wasm_binary: &[u8],
+	initial_authorities: Vec<(AuraId, GrandpaId)>,
+	root_key: AccountId,
+	endowed_accounts: Vec<AccountId>,
+	_enable_println: bool,
+) -> GenesisConfig {
+	GenesisConfig {
+		system: SystemConfig {
+			// Add Wasm runtime to storage.
+			code: wasm_binary.to_vec(),
+		},
+		...
+		carbon_assets: CarbonAssetsConfig {
+			custodian: Some(get_account_id_from_seed::<sr25519::Public>("Alice")),
+			assets: vec![],
+			metadata: vec![],
+			accounts: vec![],
+		}
+	}
+}
+
+```
 
 ## Assumptions
 
