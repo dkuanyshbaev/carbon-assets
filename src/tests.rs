@@ -19,7 +19,7 @@
 
 use super::*;
 use crate::{mock::*, Error};
-use frame_support::{assert_noop, assert_ok, traits::Currency};
+use frame_support::{assert_noop, assert_ok, traits::Currency, error::BadOrigin};
 use pallet_balances::Error as BalancesError;
 use sp_runtime::{traits::ConvertInto, TokenError};
 
@@ -557,6 +557,7 @@ fn transfer_owner_should_work() {
 		assert_eq!(Balances::reserved_balance(&1), 12);
 
 		assert_ok!(Assets::transfer_ownership(Origin::signed(1), id, 2));
+		assert_ok!(Assets::transfer_ownership(Origin::signed(2), id, 2));
 		assert_eq!(Balances::reserved_balance(&2), 12);
 		assert_eq!(Balances::reserved_balance(&1), 0);
 
@@ -781,6 +782,32 @@ fn force_metadata_should_work() {
 			),
 			Error::<Test>::BadMetadata
 		);
+		assert_noop!(
+			Assets::force_set_metadata(
+				Origin::root(),
+				ZERO_ID,
+				vec![0u8; 10],
+				vec![0u8; 10],
+				vec![0u8; limit + 1],
+				vec![0u8; 10],
+				8,
+				false
+			),
+			Error::<Test>::BadMetadata
+		);
+		assert_noop!(
+			Assets::force_set_metadata(
+				Origin::root(),
+				ZERO_ID,
+				vec![0u8; 10],
+				vec![0u8; 10],
+				vec![0u8; 10],
+				vec![0u8; limit + 1],
+				8,
+				false
+			),
+			Error::<Test>::BadMetadata
+		);
 
 		// force clear metadata works
 		assert!(Metadata::<Test>::contains_key(ZERO_ID));
@@ -920,6 +947,28 @@ fn transfer_large_asset() {
 //Carbon assets flow tests
 
 #[test]
+fn set_custodian_ok() {
+	new_test_ext().execute_with(|| {
+		let custodian = 10;
+		assert_ok!(Assets::set_custodian(Origin::root(), custodian));
+		
+		assert_eq!(Assets::get_custodian(), Some(custodian));
+	})
+}
+
+#[test]
+fn set_custodian_fail() {
+	new_test_ext().execute_with(|| {
+		let custodian = 10;
+		assert_noop!(
+			Assets::set_custodian(Origin::signed(1), custodian), 
+			BadOrigin);
+		
+		assert!(Assets::get_custodian() != Some(custodian));
+	})
+}
+
+#[test]
 fn create_asset_with_generated_name() {
 	new_test_ext().execute_with(|| {
 		let user = 4;
@@ -928,8 +977,17 @@ fn create_asset_with_generated_name() {
 		let id = Assets::get_current_asset_id(&user).unwrap();
 
 		let metadata = Metadata::<Test>::get(id);
-		assert!(metadata.name.len() > 0);
-		assert!(metadata.symbol.len() > 0);
+		assert!(metadata.name.len() == 5);
+		assert!(metadata.symbol.len() == 5);
+		assert_eq!(metadata.deposit, 11);
+		let aseet_details = Asset::<Test>::get(id).unwrap();
+		assert_eq!(aseet_details.owner, user);
+		assert_eq!(aseet_details.deposit, 1);
+		assert_eq!(aseet_details.is_sufficient, false);
+		assert_eq!(aseet_details.accounts, 0);
+		assert_eq!(aseet_details.sufficients, 0);
+		assert_eq!(aseet_details.approvals, 0);
+		assert_eq!(aseet_details.is_frozen, false);
 	})
 }
 
@@ -943,6 +1001,29 @@ fn create_asset_ensure_user_cannot_mint() {
 		
 		assert_noop!(Assets::mint(Origin::signed(user), id, 500), 
 			Error::<Test>::NoPermission);
+	})
+}
+
+#[test]
+fn create_asset_failed_no_custodian() {
+	test_ext_no_custodian().execute_with(|| {
+		let user = 4;
+		Balances::make_free_balance_be(&user, 1000);
+		assert_noop!(
+			Assets::create(Origin::signed(user), "Token".as_bytes().to_vec(), "Token".as_bytes().to_vec()),
+			Error::<Test>::NoCustodian
+		);	
+	})
+}
+
+#[test]
+fn create_asset_failed_no_balance() {
+	new_test_ext().execute_with(|| {
+		let user = 4;
+		assert_noop!(
+			Assets::create(Origin::signed(user), "Token".as_bytes().to_vec(), "Token".as_bytes().to_vec()),
+			BalancesError::<Test>::InsufficientBalance
+		);	
 	})
 }
 
@@ -1043,6 +1124,26 @@ fn set_project_data_after_mint_fail() {
 }
 
 #[test]
+fn set_project_data_failed() {
+	new_test_ext().execute_with(|| {
+		let user = 4;
+		Balances::make_free_balance_be(&user, 1000);
+		assert_ok!(Assets::create(Origin::signed(user), "Token".as_bytes().to_vec(), "Token".as_bytes().to_vec()));
+		let id = Assets::get_current_asset_id(&user).unwrap();
+		
+		assert_noop!(Assets::set_project_data(
+			Origin::signed(user), id, vec!['h' as u8,'t' as u8,'t'  as u8 ,'p' as u8],
+			 "123456789012345678901234567890123456789012345678901234567".as_bytes().to_vec()),
+			Error::<Test>::BadMetadata);
+
+		assert_noop!(Assets::set_project_data(
+			Origin::signed(5), id, vec!['h' as u8,'t' as u8,'t'  as u8 ,'p' as u8],
+				"1234".as_bytes().to_vec()),
+			Error::<Test>::NoPermission);
+	})
+}
+
+#[test]
 fn custodian_mint() {
 	new_test_ext().execute_with(|| {
 		let user = 4;
@@ -1056,6 +1157,23 @@ fn custodian_mint() {
 			
 		assert_ok!(Assets::mint(Origin::signed(CUSTODIAN), id, 500));
 		assert_eq!(500, Assets::balance(id, user));
+	})
+}
+
+#[test]
+fn not_custodian_cannot_mint() {
+	new_test_ext().execute_with(|| {
+		let user = 4;
+		Balances::make_free_balance_be(&user, 1000);
+		assert_ok!(Assets::create(Origin::signed(user), "Token".as_bytes().to_vec(), "Token".as_bytes().to_vec()));
+		let id = Assets::get_current_asset_id(&user).unwrap();
+		
+		assert_ok!(Assets::set_project_data(
+			Origin::signed(user), id, vec!['h' as u8,'t' as u8,'t'  as u8 ,'p' as u8],
+			 vec!['4' as u8,'h' as u8,'6' as u8,'g' as u8]));
+			
+		assert_noop!(Assets::mint(Origin::signed(3), id, 500),
+			Error::<Test>::NoPermission);
 	})
 }
 
@@ -1108,6 +1226,31 @@ fn custodian_burn() {
 		assert_ok!(Assets::burn(Origin::signed(CUSTODIAN), id, user, 100));
 		assert_eq!(400, Assets::balance(id, user));
 		assert_eq!(Some(100), BurnCertificate::<Test>::get(user, id));
+	})
+}
+
+#[test]
+fn custodian_burn_several_times() {
+	new_test_ext().execute_with(|| {
+		let user = 4;
+		Balances::make_free_balance_be(&user, 1000);
+		assert_ok!(Assets::create(Origin::signed(user), "Token".as_bytes().to_vec(), "Token".as_bytes().to_vec()));
+		let id = Assets::get_current_asset_id(&user).unwrap();
+		
+		assert_ok!(Assets::set_project_data(
+			Origin::signed(user), id, vec!['h' as u8,'t' as u8,'t'  as u8 ,'p' as u8],
+			 vec!['4' as u8,'h' as u8,'6' as u8,'g' as u8]));
+			
+		assert_ok!(Assets::mint(Origin::signed(CUSTODIAN), id, 500));
+		assert_eq!(500, Assets::balance(id, user));
+
+		assert_ok!(Assets::burn(Origin::signed(CUSTODIAN), id, user, 100));
+		assert_eq!(400, Assets::balance(id, user));
+		assert_eq!(Some(100), BurnCertificate::<Test>::get(user, id));
+
+		assert_ok!(Assets::burn(Origin::signed(CUSTODIAN), id, user, 111));
+		assert_eq!(289, Assets::balance(id, user));
+		assert_eq!(Some(211), BurnCertificate::<Test>::get(user, id));
 	})
 }
 

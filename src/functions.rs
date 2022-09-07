@@ -951,4 +951,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		Ok(result)
 	}
 
+	#[cfg(test)]
+	pub(super) fn get_custodian() -> Option<T::AccountId> {
+		Custodian::<T, I>::get()
+	}
 }

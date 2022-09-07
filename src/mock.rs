@@ -175,3 +175,19 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	ext.execute_with(|| System::set_block_number(1));
 	ext
 }
+
+pub(crate) fn test_ext_no_custodian() -> sp_io::TestExternalities {
+	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+
+	let config: pallet_assets::GenesisConfig<Test> = pallet_assets::GenesisConfig {
+		..Default::default()
+	};
+
+	config.assimilate_storage(&mut storage).unwrap();
+
+	let mut ext: sp_io::TestExternalities = storage.into();
+	// Clear thread local vars for https://github.com/paritytech/substrate/issues/10479.
+	ext.execute_with(|| take_hooks());
+	ext.execute_with(|| System::set_block_number(1));
+	ext
+}
