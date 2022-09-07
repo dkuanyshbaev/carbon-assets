@@ -593,7 +593,7 @@ pub mod pallet {
 					owner: owner.clone(),
 					issuer: admin.clone(),
 					admin: admin.clone(),
-					freezer: admin.clone(),
+					freezer: admin,
 					supply: Zero::zero(),
 					deposit,
 					min_balance: One::one(),
@@ -767,7 +767,7 @@ pub mod pallet {
 					*burned = Some(amount);
 				}
 			});
-			Self::deposit_event(Event::CarbonCreditsBurned {account: who, asset_id: id, amount: amount});
+			Self::deposit_event(Event::CarbonCreditsBurned {account: who, asset_id: id, amount});
 			Ok(())
 		}
 
@@ -813,7 +813,7 @@ pub mod pallet {
 					*burned = Some(amount);
 				}
 			});
-			Self::deposit_event(Event::CarbonCreditsBurned {account: caller, asset_id: id, amount: amount});
+			Self::deposit_event(Event::CarbonCreditsBurned {account: caller, asset_id: id, amount});
 			Ok(())
 		}
 

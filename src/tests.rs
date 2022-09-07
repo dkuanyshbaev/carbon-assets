@@ -983,11 +983,11 @@ fn create_asset_with_generated_name() {
 		let aseet_details = Asset::<Test>::get(id).unwrap();
 		assert_eq!(aseet_details.owner, user);
 		assert_eq!(aseet_details.deposit, 1);
-		assert_eq!(aseet_details.is_sufficient, false);
+		assert!(!aseet_details.is_sufficient);
 		assert_eq!(aseet_details.accounts, 0);
 		assert_eq!(aseet_details.sufficients, 0);
 		assert_eq!(aseet_details.approvals, 0);
-		assert_eq!(aseet_details.is_frozen, false);
+		assert!(!aseet_details.is_frozen);
 	})
 }
 
@@ -1036,8 +1036,8 @@ fn set_project_data_by_user() {
 		let id = Assets::get_current_asset_id(&user).unwrap();
 		
 		assert_ok!(Assets::set_project_data(
-			Origin::signed(user), id, vec!['h' as u8,'t' as u8,'t'  as u8 ,'p' as u8],
-			 vec!['4' as u8,'h' as u8,'6' as u8,'g' as u8]));
+			Origin::signed(user), id, vec![b'h',b't',b't' ,b'p'],
+			 vec![b'4',b'h',b'6',b'g']));
 		let metadata = Metadata::<Test>::get(id);
 		assert!(metadata.name.len() > 0);
 		assert!(metadata.symbol.len() > 0);
@@ -1055,8 +1055,8 @@ fn set_project_data_by_custodian() {
 		let id = Assets::get_current_asset_id(&user).unwrap();
 		
 		assert_ok!(Assets::set_project_data(
-			Origin::signed(CUSTODIAN), id, vec!['h' as u8,'t' as u8,'t'  as u8 ,'p' as u8],
-			 vec!['4' as u8,'h' as u8,'6' as u8,'g' as u8]));
+			Origin::signed(CUSTODIAN), id, vec![b'h',b't',b't' ,b'p'],
+			 vec![b'4',b'h',b'6',b'g']));
 		let metadata = Metadata::<Test>::get(id);
 		assert!(metadata.name.len() > 0);
 		assert!(metadata.symbol.len() > 0);
@@ -1074,8 +1074,8 @@ fn set_project_data_second_time() {
 		let id = Assets::get_current_asset_id(&user).unwrap();
 		
 		assert_ok!(Assets::set_project_data(
-			Origin::signed(user), id, vec!['h' as u8,'t' as u8,'t'  as u8 ,'p' as u8],
-			 vec!['4' as u8,'h' as u8,'6' as u8,'g' as u8]));
+			Origin::signed(user), id, vec![b'h',b't',b't' ,b'p'],
+			 vec![b'4',b'h',b'6',b'g']));
 		let metadata = Metadata::<Test>::get(id);
 		assert!(metadata.name.len() > 0);
 		assert!(metadata.symbol.len() > 0);
@@ -1083,8 +1083,8 @@ fn set_project_data_second_time() {
 		assert!(metadata.data_ipfs.len() == 4);
 
 		assert_ok!(Assets::set_project_data(
-			Origin::signed(user), id, vec!['h' as u8,'t' as u8,'t'  as u8 ,'p' as u8],
-			 vec!['4' as u8,'h' as u8,'6' as u8,'g' as u8, 'f' as u8]));
+			Origin::signed(user), id, vec![b'h',b't',b't' ,b'p'],
+			 vec![b'4',b'h',b'6',b'g', b'f']));
 		let metadata = Metadata::<Test>::get(id);
 		assert!(metadata.name.len() > 0);
 		assert!(metadata.symbol.len() > 0);
@@ -1102,8 +1102,8 @@ fn set_project_data_after_mint_fail() {
 		let id = Assets::get_current_asset_id(&user).unwrap();
 		
 		assert_ok!(Assets::set_project_data(
-			Origin::signed(user), id, vec!['h' as u8,'t' as u8,'t'  as u8 ,'p' as u8],
-			 vec!['4' as u8,'h' as u8,'6' as u8,'g' as u8]));
+			Origin::signed(user), id, vec![b'h',b't',b't' ,b'p'],
+			 vec![b'4',b'h',b'6',b'g']));
 		let metadata = Metadata::<Test>::get(id);
 		assert!(metadata.name.len() > 0);
 		assert!(metadata.symbol.len() > 0);
@@ -1112,8 +1112,8 @@ fn set_project_data_after_mint_fail() {
 
 		assert_ok!(Assets::mint(Origin::signed(CUSTODIAN), id, 100));
 		assert_noop!(Assets::set_project_data(
-			Origin::signed(user), id, vec!['h' as u8,'t' as u8,'t'  as u8 ,'p' as u8],
-			 vec!['4' as u8,'h' as u8,'6' as u8,'g' as u8, 'f' as u8]), 
+			Origin::signed(user), id, vec![b'h',b't',b't' ,b'p'],
+			 vec![b'4',b'h',b'6',b'g', b'f']), 
 			Error::<Test>::CannotChangeAfterMint);
 		let metadata = Metadata::<Test>::get(id);
 		assert!(metadata.name.len() > 0);
@@ -1132,12 +1132,12 @@ fn set_project_data_failed() {
 		let id = Assets::get_current_asset_id(&user).unwrap();
 		
 		assert_noop!(Assets::set_project_data(
-			Origin::signed(user), id, vec!['h' as u8,'t' as u8,'t'  as u8 ,'p' as u8],
+			Origin::signed(user), id, vec![b'h',b't',b't' ,b'p'],
 			 "123456789012345678901234567890123456789012345678901234567".as_bytes().to_vec()),
 			Error::<Test>::BadMetadata);
 
 		assert_noop!(Assets::set_project_data(
-			Origin::signed(5), id, vec!['h' as u8,'t' as u8,'t'  as u8 ,'p' as u8],
+			Origin::signed(5), id, vec![b'h',b't',b't' ,b'p'],
 				"1234".as_bytes().to_vec()),
 			Error::<Test>::NoPermission);
 	})
@@ -1152,8 +1152,8 @@ fn custodian_mint() {
 		let id = Assets::get_current_asset_id(&user).unwrap();
 		
 		assert_ok!(Assets::set_project_data(
-			Origin::signed(user), id, vec!['h' as u8,'t' as u8,'t'  as u8 ,'p' as u8],
-			 vec!['4' as u8,'h' as u8,'6' as u8,'g' as u8]));
+			Origin::signed(user), id, vec![b'h',b't',b't' ,b'p'],
+			 vec![b'4',b'h',b'6',b'g']));
 			
 		assert_ok!(Assets::mint(Origin::signed(CUSTODIAN), id, 500));
 		assert_eq!(500, Assets::balance(id, user));
@@ -1169,8 +1169,8 @@ fn not_custodian_cannot_mint() {
 		let id = Assets::get_current_asset_id(&user).unwrap();
 		
 		assert_ok!(Assets::set_project_data(
-			Origin::signed(user), id, vec!['h' as u8,'t' as u8,'t'  as u8 ,'p' as u8],
-			 vec!['4' as u8,'h' as u8,'6' as u8,'g' as u8]));
+			Origin::signed(user), id, vec![b'h',b't',b't' ,b'p'],
+			 vec![b'4',b'h',b'6',b'g']));
 			
 		assert_noop!(Assets::mint(Origin::signed(3), id, 500),
 			Error::<Test>::NoPermission);
@@ -1189,8 +1189,8 @@ fn custodian_full_circle() {
 		let id = Assets::get_current_asset_id(&CUSTODIAN).unwrap();
 		
 		assert_ok!(Assets::set_project_data(
-			Origin::signed(CUSTODIAN), id, vec!['h' as u8,'t' as u8,'t'  as u8 ,'p' as u8],
-			 vec!['4' as u8,'h' as u8,'6' as u8,'g' as u8]));
+			Origin::signed(CUSTODIAN), id, vec![b'h',b't',b't' ,b'p'],
+			 vec![b'4',b'h',b'6',b'g']));
 			
 		assert_ok!(Assets::mint(Origin::signed(CUSTODIAN), id, 1500));
 		assert_eq!(1500, Assets::balance(id, CUSTODIAN));
@@ -1217,8 +1217,8 @@ fn custodian_burn() {
 		let id = Assets::get_current_asset_id(&user).unwrap();
 		
 		assert_ok!(Assets::set_project_data(
-			Origin::signed(user), id, vec!['h' as u8,'t' as u8,'t'  as u8 ,'p' as u8],
-			 vec!['4' as u8,'h' as u8,'6' as u8,'g' as u8]));
+			Origin::signed(user), id, vec![b'h',b't',b't' ,b'p'],
+			 vec![b'4',b'h',b'6',b'g']));
 			
 		assert_ok!(Assets::mint(Origin::signed(CUSTODIAN), id, 500));
 		assert_eq!(500, Assets::balance(id, user));
@@ -1238,8 +1238,8 @@ fn custodian_burn_several_times() {
 		let id = Assets::get_current_asset_id(&user).unwrap();
 		
 		assert_ok!(Assets::set_project_data(
-			Origin::signed(user), id, vec!['h' as u8,'t' as u8,'t'  as u8 ,'p' as u8],
-			 vec!['4' as u8,'h' as u8,'6' as u8,'g' as u8]));
+			Origin::signed(user), id, vec![b'h',b't',b't' ,b'p'],
+			 vec![b'4',b'h',b'6',b'g']));
 			
 		assert_ok!(Assets::mint(Origin::signed(CUSTODIAN), id, 500));
 		assert_eq!(500, Assets::balance(id, user));
@@ -1263,8 +1263,8 @@ fn user_self_burn() {
 		let id = Assets::get_current_asset_id(&user).unwrap();
 		
 		assert_ok!(Assets::set_project_data(
-			Origin::signed(user), id, vec!['h' as u8,'t' as u8,'t'  as u8 ,'p' as u8],
-			 vec!['4' as u8,'h' as u8,'6' as u8,'g' as u8]));
+			Origin::signed(user), id, vec![b'h',b't',b't' ,b'p'],
+			 vec![b'4',b'h',b'6',b'g']));
 			
 		assert_ok!(Assets::mint(Origin::signed(CUSTODIAN), id, 500));
 		assert_eq!(500, Assets::balance(id, user));
@@ -1289,8 +1289,8 @@ fn user_cannot_self_burn_more() {
 		let id = Assets::get_current_asset_id(&user).unwrap();
 		
 		assert_ok!(Assets::set_project_data(
-			Origin::signed(user), id, vec!['h' as u8,'t' as u8,'t'  as u8 ,'p' as u8],
-			 vec!['4' as u8,'h' as u8,'6' as u8,'g' as u8]));
+			Origin::signed(user), id, vec![b'h',b't',b't' ,b'p'],
+			 vec![b'4',b'h',b'6',b'g']));
 			
 		assert_ok!(Assets::mint(Origin::signed(CUSTODIAN), id, 500));
 		assert_eq!(500, Assets::balance(id, user));
@@ -1316,8 +1316,8 @@ fn custodian_cannot_burn_more() {
 		let id = Assets::get_current_asset_id(&user).unwrap();
 		
 		assert_ok!(Assets::set_project_data(
-			Origin::signed(user), id, vec!['h' as u8,'t' as u8,'t'  as u8 ,'p' as u8],
-			 vec!['4' as u8,'h' as u8,'6' as u8,'g' as u8]));
+			Origin::signed(user), id, vec![b'h',b't',b't' ,b'p'],
+			 vec![b'4',b'h',b'6',b'g']));
 			
 		assert_ok!(Assets::mint(Origin::signed(CUSTODIAN), id, 500));
 		assert_eq!(500, Assets::balance(id, user));
