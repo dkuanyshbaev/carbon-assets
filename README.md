@@ -28,6 +28,36 @@ The Carbon Assets module provides functionality for the tokenization of Carbon U
 
 Here's a repo with source code of a dApp for tokenization flow above: https://github.com/EvercityEcosystem/carbon-dapp
 
+## User Flow 
+
+Participants:
+Issuer (Climate Project)
+Custodian (for example Evercity)
+Registry (Registry company that stores Carbon Credits)
+Standard (Carbon Credits Standard company)
+Investor (Buyer)
+
+Tokenization
+- Issuer has issued carbon credits in a Registry, certified by the Standard which is reflected in the respective registry entry
+- Issuer opens account on Evercity DApp and connects it with a personal blockchain wallet
+- Issuer creates an application for the tokenization of carbon credits and includes information about the offset (vintage, project ID, amount, etc). 
+- Custodian receives the application and approves it, notifying the Standard and the Registry. Custodian contacts the Issuer, and transfers the payment; 
+- Carbon credits are retired in the Registry by the Issuer. In the in the beneficiary field, the Issuer enters a specific information about tokenization on Evercity DApp 
+
+Purchase
+
+- Investor opens account on Evercity DApp and connects it with a personal blockchain wallet
+- Custodian is doing the KYC on the investor, and makes sure that only verified investor are able to purchase the carbon offsets
+- Investor transfers money to the bank account of the Custodian to be able to execute payments
+- Investor wants to purchase Carbon Credits, creates an application, including the amount of carbon credits to purchase with the respective price. Investor confirms the transaction
+- Everusd money are locked on Investor’s account
+- Once the Issuer has approved the purchase application, carbon credits are transferred to Investor’s account, and Issuer receives Everusd
+
+Retirement 
+- To retire (burn) carbon credits, or retrieve Everusd for money, a user needs to contact the Custodian with the specific application. Custodian does KYC on the beneficiary of the offset retirement.
+- Investor retires the carbon credits (burns tokens) on Evercity DApp and states the beneficiary entity / person
+- The information about retirement is reflected in the Issuer’s project profile card on Evercity DApp
+
 ## Interface
 
 ### Dispatchable Functions
