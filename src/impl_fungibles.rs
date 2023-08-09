@@ -106,10 +106,7 @@ impl<T: Config<I>, I: 'static> fungibles::Mutate<<T as SystemConfig>::AccountId>
     }
 }
 
-// impl<T: Config<I>, I: 'static> fungibles::Transfer<T::AccountId> for Pallet<T, I> {
-impl<T: Config<I>, I: 'static> frame_support::traits::nonfungibles::Transfer<T::AccountId>
-    for Pallet<T, I>
-{
+impl<T: Config<I>, I: 'static> fungibles::Transfer<T::AccountId> for Pallet<T, I> {
     fn transfer(
         asset: AssetId,
         source: &T::AccountId,
