@@ -106,23 +106,6 @@ impl<T: Config<I>, I: 'static> fungibles::Mutate<<T as SystemConfig>::AccountId>
     }
 }
 
-impl<T: Config<I>, I: 'static> fungibles::Transfer<T::AccountId> for Pallet<T, I> {
-    fn transfer(
-        asset: AssetId,
-        source: &T::AccountId,
-        dest: &T::AccountId,
-        amount: T::Balance,
-        keep_alive: bool,
-    ) -> Result<T::Balance, DispatchError> {
-        let f = TransferFlags {
-            keep_alive,
-            best_effort: false,
-            burn_dust: false,
-        };
-        Self::do_transfer(asset, source, dest, amount, None, f)
-    }
-}
-
 impl<T: Config<I>, I: 'static> fungibles::Unbalanced<T::AccountId> for Pallet<T, I> {
     fn set_total_issuance(id: AssetId, amount: Self::Balance) {
         Asset::<T, I>::mutate_exists(id, |maybe_asset| {
@@ -144,19 +127,19 @@ impl<T: Config<I>, I: 'static> fungibles::Create<T::AccountId> for Pallet<T, I> 
     }
 }
 
-impl<T: Config<I>, I: 'static> fungibles::Destroy<T::AccountId> for Pallet<T, I> {
-    // fn get_destroy_witness(asset: &AssetId) -> Option<Self::DestroyWitness> {
-    //     Asset::<T, I>::get(asset).map(|asset_details| asset_details.destroy_witness())
-    // }
-
-    // fn destroy(
-    //     id: AssetId,
-    //     witness: Self::DestroyWitness,
-    //     maybe_check_owner: Option<T::AccountId>,
-    // ) -> Result<Self::DestroyWitness, DispatchError> {
-    //     Self::do_destroy(id, witness, maybe_check_owner)
-    // }
-}
+// impl<T: Config<I>, I: 'static> fungibles::Destroy<T::AccountId> for Pallet<T, I> {
+//     // fn get_destroy_witness(asset: &AssetId) -> Option<Self::DestroyWitness> {
+//     //     Asset::<T, I>::get(asset).map(|asset_details| asset_details.destroy_witness())
+//     // }
+//
+//     // fn destroy(
+//     //     id: AssetId,
+//     //     witness: Self::DestroyWitness,
+//     //     maybe_check_owner: Option<T::AccountId>,
+//     // ) -> Result<Self::DestroyWitness, DispatchError> {
+//     //     Self::do_destroy(id, witness, maybe_check_owner)
+//     // }
+// }
 
 impl<T: Config<I>, I: 'static> fungibles::metadata::Inspect<<T as SystemConfig>::AccountId>
     for Pallet<T, I>
