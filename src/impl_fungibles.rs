@@ -18,6 +18,15 @@
 //! Implementations for fungibles trait.
 
 use super::*;
+use frame_support::{
+    defensive,
+    traits::tokens::{
+        Fortitude,
+        Precision::{self, BestEffort},
+        Preservation::{self, Expendable},
+        Provenance::{self, Minted},
+    },
+};
 
 impl<T: Config<I>, I: 'static> fungibles::Inspect<<T as SystemConfig>::AccountId> for Pallet<T, I> {
     type AssetId = types::AssetId;
@@ -40,20 +49,22 @@ impl<T: Config<I>, I: 'static> fungibles::Inspect<<T as SystemConfig>::AccountId
     }
 
     fn reducible_balance(
-        asset: AssetId,
+        asset: Self::AssetId,
         who: &<T as SystemConfig>::AccountId,
-        keep_alive: bool,
+        preservation: Preservation,
+        _: Fortitude,
     ) -> Self::Balance {
-        Pallet::<T, I>::reducible_balance(asset, who, keep_alive).unwrap_or_else(|_| Zero::zero())
+        Pallet::<T, I>::reducible_balance(asset, who, !matches!(preservation, Expendable))
+            .unwrap_or(Zero::zero())
     }
 
     fn can_deposit(
-        asset: AssetId,
+        asset: Self::AssetId,
         who: &<T as SystemConfig>::AccountId,
         amount: Self::Balance,
-        mint: bool,
+        provenance: Provenance,
     ) -> DepositConsequence {
-        Pallet::<T, I>::can_increase(asset, who, amount, mint)
+        Pallet::<T, I>::can_increase(asset, who, amount, provenance == Minted)
     }
 
     fn can_withdraw(
@@ -93,24 +104,42 @@ impl<T: Config<I>, I: 'static> fungibles::Inspect<<T as SystemConfig>::AccountId
 // }
 
 impl<T: Config<I>, I: 'static> fungibles::Mutate<<T as SystemConfig>::AccountId> for Pallet<T, I> {
-    fn mint_into(
-        asset: AssetId,
-        who: &<T as SystemConfig>::AccountId,
+    fn done_mint_into(
+        asset_id: Self::AssetId,
+        beneficiary: &<T as SystemConfig>::AccountId,
         amount: Self::Balance,
-    ) -> DispatchResult {
-        Self::do_mint(asset, who, amount, None)
+    ) {
+        Self::deposit_event(Event::Issued {
+            asset_id,
+            owner: beneficiary.clone(),
+            amount,
+        })
     }
 
-    fn burn_from(
-        asset: AssetId,
-        who: &<T as SystemConfig>::AccountId,
+    fn done_burn_from(
+        asset_id: Self::AssetId,
+        target: &<T as SystemConfig>::AccountId,
+        balance: Self::Balance,
+    ) {
+        Self::deposit_event(Event::Burned {
+            asset_id,
+            owner: target.clone(),
+            balance,
+        });
+    }
+
+    fn done_transfer(
+        asset_id: Self::AssetId,
+        source: &<T as SystemConfig>::AccountId,
+        dest: &<T as SystemConfig>::AccountId,
         amount: Self::Balance,
-    ) -> Result<Self::Balance, DispatchError> {
-        let f = DebitFlags {
-            keep_alive: false,
-            best_effort: false,
-        };
-        Self::do_burn(asset, who, amount, None, f)
+    ) {
+        Self::deposit_event(Event::Transferred {
+            asset_id,
+            from: source.clone(),
+            to: dest.clone(),
+            amount,
+        });
     }
 }
 
@@ -121,6 +150,17 @@ impl<T: Config<I>, I: 'static> fungibles::Unbalanced<T::AccountId> for Pallet<T,
                 asset.supply = amount
             }
         });
+    }
+    fn handle_dust(_: fungibles::Dust<T::AccountId, Self>) {
+        defensive!("`decrease_balance` and `increase_balance` have non-default impls; nothing else calls this; qed");
+    }
+    fn write_balance(
+        _: Self::AssetId,
+        _: &T::AccountId,
+        _: Self::Balance,
+    ) -> Result<Option<Self::Balance>, DispatchError> {
+        defensive!("write_balance is not used if other functions are impl'd");
+        Err(DispatchError::Unavailable)
     }
 }
 
