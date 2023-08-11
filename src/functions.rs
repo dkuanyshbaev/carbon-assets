@@ -378,7 +378,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         Self::deposit_event(Event::Issued {
             asset_id: id,
             owner: beneficiary.clone(),
-            total_supply: amount,
+            amount: amount,
         });
         Ok(())
     }

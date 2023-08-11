@@ -422,7 +422,7 @@ pub mod pallet {
         Issued {
             asset_id: AssetId,
             owner: T::AccountId,
-            total_supply: T::Balance,
+            amount: T::Balance,
         },
         /// Some assets were transferred.
         Transferred {
