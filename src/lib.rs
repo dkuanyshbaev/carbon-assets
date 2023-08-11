@@ -231,7 +231,7 @@ pub mod pallet {
         type WeightInfo: WeightInfo;
 
         /// Randomness for asssets name generation
-        type Randomness: frame_support::traits::Randomness<Self::Hash, Self::BlockNumber>;
+        type Randomness: frame_support::traits::Randomness<Self::Hash, BlockNumberFor<Self>>;
     }
 
     #[pallet::storage]
