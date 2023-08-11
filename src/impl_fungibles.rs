@@ -63,6 +63,14 @@ impl<T: Config<I>, I: 'static> fungibles::Inspect<<T as SystemConfig>::AccountId
     ) -> WithdrawConsequence<Self::Balance> {
         Pallet::<T, I>::can_decrease(asset, who, amount, false)
     }
+
+    fn asset_exists(asset: AssetId) -> bool {
+        Asset::<T, I>::contains_key(asset)
+    }
+
+    fn total_balance(asset: AssetId, who: &<T as SystemConfig>::AccountId) -> Self::Balance {
+        Pallet::<T, I>::balance(asset, who)
+    }
 }
 
 // impl<T: Config<I>, I: 'static> fungibles::InspectMetadata<<T as SystemConfig>::AccountId>
