@@ -18,12 +18,7 @@
 //! Various basic types for use in the assets pallet.
 
 use super::*;
-use frame_support::{
-    pallet_prelude::*,
-    // traits::{fungible, tokens::BalanceConversion},
-    traits::fungible,
-};
-// use sp_runtime::{traits::Convert, FixedPointNumber, FixedPointOperand, FixedU128};
+use frame_support::pallet_prelude::*;
 
 pub type AssetId = [u8; 24];
 
@@ -237,49 +232,3 @@ pub enum ConversionError {
     /// converted.
     AssetNotSufficient,
 }
-
-// Type alias for `frame_system`'s account id.
-type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-// This pallet's asset id and balance type.
-type AssetBalanceOf<T, I> = <T as Config<I>>::Balance;
-// Generic fungible balance type.
-type BalanceOf<F, T> = <F as fungible::Inspect<AccountIdOf<T>>>::Balance;
-
-// /// Converts a balance value into an asset balance based on the ratio between the fungible's
-// /// minimum balance and the minimum asset balance.
-// pub struct BalanceToAssetBalance<F, T, CON, I = ()>(PhantomData<(F, T, CON, I)>);
-// impl<F, T, CON, I> BalanceConversion<BalanceOf<F, T>, AssetId, AssetBalanceOf<T, I>>
-//     for BalanceToAssetBalance<F, T, CON, I>
-// where
-//     F: fungible::Inspect<AccountIdOf<T>>,
-//     T: Config<I>,
-//     I: 'static,
-//     CON: Convert<BalanceOf<F, T>, AssetBalanceOf<T, I>>,
-//     BalanceOf<F, T>: FixedPointOperand + Zero,
-//     AssetBalanceOf<T, I>: FixedPointOperand + Zero,
-// {
-//     type Error = ConversionError;
-//
-//     /// Convert the given balance value into an asset balance based on the ratio between the
-//     /// fungible's minimum balance and the minimum asset balance.
-//     ///
-//     /// Will return `Err` if the asset is not found, not sufficient or the fungible's minimum
-//     /// balance is zero.
-//     fn to_asset_balance(
-//         balance: BalanceOf<F, T>,
-//         asset_id: AssetId,
-//     ) -> Result<AssetBalanceOf<T, I>, ConversionError> {
-//         let asset = Asset::<T, I>::get(asset_id).ok_or(ConversionError::AssetMissing)?;
-//         // only sufficient assets have a min balance with reliable value
-//         ensure!(asset.is_sufficient, ConversionError::AssetNotSufficient);
-//         let min_balance = CON::convert(F::minimum_balance());
-//         // make sure we don't divide by zero
-//         ensure!(!min_balance.is_zero(), ConversionError::MinBalanceZero);
-//         let balance = CON::convert(balance);
-//         // balance * asset.min_balance / min_balance
-//         Ok(
-//             FixedU128::saturating_from_rational(asset.min_balance, min_balance)
-//                 .saturating_mul_int(balance),
-//         )
-//     }
-// }

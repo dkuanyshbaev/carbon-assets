@@ -22,7 +22,6 @@ use frame_support::{
     defensive,
     traits::tokens::{
         Fortitude,
-        Precision::{self, BestEffort},
         Preservation::{self, Expendable},
         Provenance::{self, Minted},
     },
