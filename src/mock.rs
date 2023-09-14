@@ -51,11 +51,13 @@ impl frame_system::Config for Test {
     type BlockLength = ();
     type RuntimeOrigin = RuntimeOrigin;
     type RuntimeCall = RuntimeCall;
+    type Nonce = polkadot_primitives::Nonce;
     type Hash = H256;
     type Hashing = BlakeTwo256;
     type AccountId = u64;
     type Lookup = IdentityLookup<Self::AccountId>;
     type RuntimeEvent = RuntimeEvent;
+    type Block = Block;
     type BlockHashCount = ConstU64<250>;
     type DbWeight = ();
     type Version = ();
