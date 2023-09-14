@@ -27,6 +27,7 @@ use frame_support::{
 use frame_support_test::TestRandomness;
 use sp_core::H256;
 use sp_runtime::traits::{BlakeTwo256, IdentityLookup};
+use sp_runtime::BuildStorage;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -147,9 +148,10 @@ pub(crate) fn take_hooks() -> Vec<Hook> {
 pub const PREEXIST_ASSET: [u8; 24] = [99u8; 24];
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
-    let mut storage = frame_system::GenesisConfig::default()
-        .build_storage::<Test>()
-        .unwrap();
+    let mut storage = <frame_system::GenesisConfig<Test> as BuildStorage>::build_storage(
+        &frame_system::GenesisConfig::default(),
+    )
+    .unwrap();
 
     let config: pallet_assets::GenesisConfig<Test> = pallet_assets::GenesisConfig {
         custodian: Some(CUSTODIAN),
@@ -167,7 +169,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
         ],
     };
 
-    config.assimilate_storage(&mut storage).unwrap();
+    BuildStorage::assimilate_storage(&config, &mut storage);
 
     let mut ext: sp_io::TestExternalities = storage.into();
     // Clear thread local vars for https://github.com/paritytech/substrate/issues/10479.
@@ -177,15 +179,16 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 }
 
 pub(crate) fn test_ext_no_custodian() -> sp_io::TestExternalities {
-    let mut storage = frame_system::GenesisConfig::default()
-        .build_storage::<Test>()
-        .unwrap();
+    let mut storage = <frame_system::GenesisConfig<Test> as BuildStorage>::build_storage(
+        &frame_system::GenesisConfig::default(),
+    )
+    .unwrap();
 
     let config: pallet_assets::GenesisConfig<Test> = pallet_assets::GenesisConfig {
         ..Default::default()
     };
 
-    config.assimilate_storage(&mut storage).unwrap();
+    BuildStorage::assimilate_storage(&config, &mut storage);
 
     let mut ext: sp_io::TestExternalities = storage.into();
     // Clear thread local vars for https://github.com/paritytech/substrate/issues/10479.
