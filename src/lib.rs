@@ -146,9 +146,9 @@ use sp_runtime::{
 use sp_std::{borrow::Borrow, prelude::*};
 
 use frame_support::{
-    dispatch::{DispatchError, DispatchResult},
+    dispatch::DispatchResult,
     ensure,
-    pallet_prelude::DispatchResultWithPostInfo,
+    pallet_prelude::{DispatchError, DispatchResultWithPostInfo},
     traits::{
         tokens::{fungibles, DepositConsequence, WithdrawConsequence},
         BalanceStatus::Reserved,
