@@ -152,7 +152,7 @@ use frame_support::{
     traits::{
         tokens::{fungibles, DepositConsequence, WithdrawConsequence},
         BalanceStatus::Reserved,
-        Currency, GenesisBuild, ReservableCurrency, StoredMap,
+        BuildGenesisConfig, Currency, ReservableCurrency, StoredMap,
     },
 };
 use frame_system::Config as SystemConfig;
@@ -330,7 +330,7 @@ pub mod pallet {
     }
 
     #[pallet::genesis_build]
-    impl<T: Config<I>, I: 'static> GenesisBuild<T, I> for GenesisConfig<T, I> {
+    impl<T: Config<I>, I: 'static> BuildGenesisConfig for GenesisConfig<T, I> {
         fn build(&self) {
             if let Some(custodian_account) = &self.custodian {
                 Custodian::<T, I>::put(custodian_account);
