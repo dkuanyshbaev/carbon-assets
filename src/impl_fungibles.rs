@@ -22,10 +22,14 @@ use frame_support::{
     defensive,
     traits::tokens::{
         Fortitude,
+        Precision::{self, BestEffort},
         Preservation::{self, Expendable},
         Provenance::{self, Minted},
     },
 };
+
+use frame_support::traits::fungibles::Mutate;
+use frame_support::traits::tokens::Fortitude::Force;
 
 impl<T: Config<I>, I: 'static> fungibles::Inspect<<T as SystemConfig>::AccountId> for Pallet<T, I> {
     type AssetId = types::AssetId;
@@ -141,6 +145,25 @@ impl<T: Config<I>, I: 'static> fungibles::Unbalanced<T::AccountId> for Pallet<T,
     ) -> Result<Option<Self::Balance>, DispatchError> {
         defensive!("write_balance is not used if other functions are impl'd");
         Err(DispatchError::Unavailable)
+    }
+
+    /// Simple infallible function to force an account to have a particular balance, good for use
+    /// in tests and benchmarks but not recommended for production code owing to the lack of
+    /// error reporting.
+    ///
+    /// Returns the new balance.
+    fn set_balance(
+        asset: Self::AssetId,
+        who: &T::AccountId,
+        amount: Self::Balance,
+    ) -> Self::Balance {
+        let b = Self::balance(asset.clone(), who);
+        if b > amount {
+            Self::burn_from(asset, who, b - amount, BestEffort, Force).map(|d| b.saturating_sub(d))
+        } else {
+            Self::mint_into(asset, who, amount - b).map(|d| b.saturating_add(d))
+        }
+        .unwrap_or(b)
     }
 }
 

@@ -21,7 +21,7 @@ use super::*;
 use crate::{mock::*, Error};
 use frame_support::{assert_noop, assert_ok, error::BadOrigin, traits::Currency};
 use pallet_balances::Error as BalancesError;
-use sp_runtime::{traits::ConvertInto, TokenError};
+use sp_runtime::TokenError;
 
 pub const ZERO_ID: [u8; 24] = [0; 24];
 pub const ONE_ID: [u8; 24] = [1; 24];
@@ -1164,9 +1164,9 @@ fn freezer_should_work() {
 
 #[test]
 fn imbalances_should_work() {
-    use frame_support::traits::tokens::fungibles::Balanced;
-
     new_test_ext().execute_with(|| {
+        use frame_support::traits::fungibles::Balanced;
+
         assert_ok!(Assets::force_create(
             RuntimeOrigin::root(),
             ZERO_ID,

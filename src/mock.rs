@@ -22,24 +22,19 @@ use crate as pallet_assets;
 
 use frame_support::{
     construct_runtime,
-    traits::{ConstU32, ConstU64, GenesisBuild},
+    traits::{ConstU32, ConstU64},
 };
 use frame_support_test::TestRandomness;
 use sp_core::H256;
 use sp_runtime::traits::{BlakeTwo256, IdentityLookup};
 use sp_runtime::BuildStorage;
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
 pub const CUSTODIAN: u64 = 1;
 
 construct_runtime!(
-    pub enum Test where
-        Block = Block,
-        NodeBlock = Block,
-        UncheckedExtrinsic = UncheckedExtrinsic,
-    {
+    pub enum Test {
         System: frame_system::{Pallet, Call, Config<T>, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
         Assets: pallet_assets::{Pallet, Call, Storage, Event<T>},
