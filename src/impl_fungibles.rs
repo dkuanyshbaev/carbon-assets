@@ -123,6 +123,13 @@ impl<T: Config<I>, I: 'static> fungibles::Mutate<<T as SystemConfig>::AccountId>
     }
 }
 
+impl<T: Config<I>, I: 'static> fungibles::Balanced<<T as SystemConfig>::AccountId>
+    for Pallet<T, I>
+{
+    type OnDropCredit = fungibles::DecreaseIssuance<T::AccountId, Self>;
+    type OnDropDebt = fungibles::IncreaseIssuance<T::AccountId, Self>;
+}
+
 impl<T: Config<I>, I: 'static> fungibles::Unbalanced<T::AccountId> for Pallet<T, I> {
     fn set_total_issuance(id: AssetId, amount: Self::Balance) {
         Asset::<T, I>::mutate_exists(id, |maybe_asset| {

@@ -164,7 +164,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
         ],
     };
 
-    BuildStorage::assimilate_storage(&config, &mut storage);
+    let _ = BuildStorage::assimilate_storage(&config, &mut storage);
 
     let mut ext: sp_io::TestExternalities = storage.into();
     // Clear thread local vars for https://github.com/paritytech/substrate/issues/10479.
@@ -183,7 +183,7 @@ pub(crate) fn test_ext_no_custodian() -> sp_io::TestExternalities {
         ..Default::default()
     };
 
-    BuildStorage::assimilate_storage(&config, &mut storage);
+    let _ = BuildStorage::assimilate_storage(&config, &mut storage);
 
     let mut ext: sp_io::TestExternalities = storage.into();
     // Clear thread local vars for https://github.com/paritytech/substrate/issues/10479.

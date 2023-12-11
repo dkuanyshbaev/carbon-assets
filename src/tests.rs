@@ -1164,9 +1164,9 @@ fn freezer_should_work() {
 
 #[test]
 fn imbalances_should_work() {
-    new_test_ext().execute_with(|| {
-        use frame_support::traits::fungibles::Balanced;
+    use frame_support::traits::fungibles::Balanced;
 
+    new_test_ext().execute_with(|| {
         assert_ok!(Assets::force_create(
             RuntimeOrigin::root(),
             ZERO_ID,
