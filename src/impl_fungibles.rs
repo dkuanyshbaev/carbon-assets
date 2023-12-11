@@ -22,14 +22,10 @@ use frame_support::{
     defensive,
     traits::tokens::{
         Fortitude,
-        Precision::{self, BestEffort},
         Preservation::{self, Expendable},
         Provenance::{self, Minted},
     },
 };
-
-use frame_support::traits::fungibles::Mutate;
-use frame_support::traits::tokens::Fortitude::Force;
 
 impl<T: Config<I>, I: 'static> fungibles::Inspect<<T as SystemConfig>::AccountId> for Pallet<T, I> {
     type AssetId = types::AssetId;
@@ -146,25 +142,6 @@ impl<T: Config<I>, I: 'static> fungibles::Unbalanced<T::AccountId> for Pallet<T,
         defensive!("write_balance is not used if other functions are impl'd");
         Err(DispatchError::Unavailable)
     }
-
-    /// Simple infallible function to force an account to have a particular balance, good for use
-    /// in tests and benchmarks but not recommended for production code owing to the lack of
-    /// error reporting.
-    ///
-    /// Returns the new balance.
-    fn set_balance(
-        asset: Self::AssetId,
-        who: &T::AccountId,
-        amount: Self::Balance,
-    ) -> Self::Balance {
-        let b = Self::balance(asset.clone(), who);
-        if b > amount {
-            Self::burn_from(asset, who, b - amount, BestEffort, Force).map(|d| b.saturating_sub(d))
-        } else {
-            Self::mint_into(asset, who, amount - b).map(|d| b.saturating_add(d))
-        }
-        .unwrap_or(b)
-    }
 }
 
 impl<T: Config<I>, I: 'static> fungibles::Create<T::AccountId> for Pallet<T, I> {
@@ -177,20 +154,6 @@ impl<T: Config<I>, I: 'static> fungibles::Create<T::AccountId> for Pallet<T, I> 
         Self::do_force_create(id, admin, is_sufficient, min_balance)
     }
 }
-
-// impl<T: Config<I>, I: 'static> fungibles::Destroy<T::AccountId> for Pallet<T, I> {
-//     // fn get_destroy_witness(asset: &AssetId) -> Option<Self::DestroyWitness> {
-//     //     Asset::<T, I>::get(asset).map(|asset_details| asset_details.destroy_witness())
-//     // }
-//
-//     // fn destroy(
-//     //     id: AssetId,
-//     //     witness: Self::DestroyWitness,
-//     //     maybe_check_owner: Option<T::AccountId>,
-//     // ) -> Result<Self::DestroyWitness, DispatchError> {
-//     //     Self::do_destroy(id, witness, maybe_check_owner)
-//     // }
-// }
 
 impl<T: Config<I>, I: 'static> fungibles::metadata::Inspect<<T as SystemConfig>::AccountId>
     for Pallet<T, I>
