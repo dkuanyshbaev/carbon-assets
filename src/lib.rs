@@ -152,13 +152,31 @@ use frame_support::{
     traits::{
         tokens::{fungibles, DepositConsequence, WithdrawConsequence},
         BalanceStatus::Reserved,
-        BuildGenesisConfig, Currency, ReservableCurrency, StoredMap,
+        BuildGenesisConfig, Currency, EnsureOriginWithArg, ReservableCurrency, StoredMap,
     },
 };
 use frame_system::Config as SystemConfig;
 
 pub use pallet::*;
 pub use weights::WeightInfo;
+
+/// Trait with callbacks that are executed after successfull asset creation or destruction.
+pub trait AssetsCallback<AssetId, AccountId> {
+    /// Indicates that asset with `id` was successfully created by the `owner`
+    fn created(_id: &AssetId, _owner: &AccountId) -> Result<(), ()> {
+        Ok(())
+    }
+
+    /// Indicates that asset with `id` has just been destroyed
+    fn destroyed(_id: &AssetId) -> Result<(), ()> {
+        Ok(())
+    }
+}
+
+/// Empty implementation in case no callbacks are required.
+impl<AssetId, AccountId> AssetsCallback<AssetId, AccountId> for () {}
+
+type AccountIdLookupOf<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -231,6 +249,17 @@ pub mod pallet {
 
         /// Randomness for asssets name generation
         type Randomness: frame_support::traits::Randomness<Self::Hash, BlockNumberFor<Self>>;
+
+        /// Standard asset class creation is only allowed if the origin attempting it and the
+        /// asset class are in this set.
+        type CreateOrigin: EnsureOriginWithArg<
+            Self::RuntimeOrigin,
+            AssetId,
+            Success = Self::AccountId,
+        >;
+
+        /// Callback methods for asset state change (e.g. asset created or destroyed)
+        type CallbackHandle: AssetsCallback<AssetId, Self::AccountId>;
     }
 
     #[pallet::storage]
@@ -354,6 +383,7 @@ pub mod pallet {
                         sufficients: 0,
                         approvals: 0,
                         is_frozen: false,
+                        status: AssetStatus::Live,
                     },
                 );
             }
@@ -416,6 +446,7 @@ pub mod pallet {
         Created {
             asset_id: AssetId,
             creator: T::AccountId,
+            owner: T::AccountId,
         },
         /// Some assets were issued.
         Issued {
@@ -517,6 +548,12 @@ pub mod pallet {
             asset_id: AssetId,
             amount: T::Balance,
         },
+        /// Some account `who` was created with a deposit from `depositor`.
+        Touched {
+            asset_id: AssetId,
+            who: T::AccountId,
+            depositor: T::AccountId,
+        },
     }
 
     #[pallet::error]
@@ -540,7 +577,7 @@ pub mod pallet {
         /// Unable to increment the consumer reference counters on the account. Either no provider
         /// reference exists to allow a non-zero balance of a non-self-sufficient asset, or the
         /// maximum number of consumers has been reached.
-        NoProvider,
+        UnavailableConsumer,
         /// Invalid metadata given.
         BadMetadata,
         /// No approval exists that would allow the transfer.
@@ -561,6 +598,10 @@ pub mod pallet {
         CannotChangeAfterMint,
         /// Error creating AssetId
         ErrorCreatingAssetId,
+        /// The asset is not live, and likely being destroyed.
+        AssetNotLive,
+        /// Callback action resulted in error
+        CallbackFailed,
     }
 
     #[pallet::call]
@@ -583,58 +624,125 @@ pub mod pallet {
             Ok(())
         }
 
-        /// Issue a new class of fungible carbon assets from a public origin.
+        // /// Issue a new class of fungible carbon assets from a public origin.
+        // ///
+        // /// This new asset class has no assets initially and its owner is the origin.
+        // ///
+        // /// The origin must be Signed and the sender must have sufficient funds free.
+        // ///
+        // /// - `name`: The user friendly name of this asset. Limited in length by `StringLimit`.
+        // /// - `symbol`: The exchange symbol for this asset. Limited in length by `StringLimit`.
+        // ///
+        // /// Funds of sender are reserved by `AssetDeposit`.
+        // ///
+        // /// Admin of asset is the Custodian. Fails if no custodian are set.
+        // /// Set asset metadata: generated `name` and `symbol`, decimals to 9.
+        // ///
+        // /// Emits `Created` event when successful.
+        // /// Emits `MetadataSet` with generated `name` and `symbol`.
+        // ///
+        // #[pallet::call_index(1)]
+        // #[pallet::weight(T::WeightInfo::create())]
+        // pub fn create(origin: OriginFor<T>, name: Vec<u8>, symbol: Vec<u8>) -> DispatchResult {
+        //     let owner = ensure_signed(origin)?;
+        //     let admin_option = Custodian::<T, I>::get();
+        //     ensure!(admin_option.is_some(), Error::<T, I>::NoCustodian);
+        //     let admin = admin_option.unwrap();
+        //     let id = Self::get_new_asset_id(&owner)?;
+        //
+        //     let deposit = T::AssetDeposit::get();
+        //     T::Currency::reserve(&owner, deposit)?;
+        //
+        //     Asset::<T, I>::insert(
+        //         id,
+        //         AssetDetails {
+        //             owner: owner.clone(),
+        //             issuer: admin.clone(),
+        //             admin: admin.clone(),
+        //             freezer: admin,
+        //             supply: Zero::zero(),
+        //             deposit,
+        //             min_balance: One::one(),
+        //             is_sufficient: false,
+        //             accounts: 0,
+        //             sufficients: 0,
+        //             approvals: 0,
+        //             is_frozen: false,
+        //             status: AssetStatus::Live,
+        //         },
+        //     );
+        //     Self::deposit_event(Event::Created {
+        //         asset_id: id,
+        //         creator: owner.clone(),
+        //     });
+        //
+        //     Self::do_set_metadata(id, &owner, name, symbol, 9)
+        // }
+        /// Issue a new class of fungible assets from a public origin.
         ///
         /// This new asset class has no assets initially and its owner is the origin.
         ///
-        /// The origin must be Signed and the sender must have sufficient funds free.
-        ///
-        /// - `name`: The user friendly name of this asset. Limited in length by `StringLimit`.
-        /// - `symbol`: The exchange symbol for this asset. Limited in length by `StringLimit`.
+        /// The origin must conform to the configured `CreateOrigin` and have sufficient funds free.
         ///
         /// Funds of sender are reserved by `AssetDeposit`.
         ///
-        /// Admin of asset is the Custodian. Fails if no custodian are set.
-        /// Set asset metadata: generated `name` and `symbol`, decimals to 9.
+        /// Parameters:
+        /// - `id`: The identifier of the new asset. This must not be currently in use to identify
+        /// an existing asset.
+        /// - `admin`: The admin of this class of assets. The admin is the initial address of each
+        /// member of the asset class's admin team.
+        /// - `min_balance`: The minimum balance of this new asset that any single account must
+        /// have. If an account's balance is reduced below this, then it collapses to zero.
         ///
         /// Emits `Created` event when successful.
-        /// Emits `MetadataSet` with generated `name` and `symbol`.
         ///
+        /// Weight: `O(1)`
         #[pallet::call_index(1)]
         #[pallet::weight(T::WeightInfo::create())]
-        pub fn create(origin: OriginFor<T>, name: Vec<u8>, symbol: Vec<u8>) -> DispatchResult {
-            let owner = ensure_signed(origin)?;
-            let admin_option = Custodian::<T, I>::get();
-            ensure!(admin_option.is_some(), Error::<T, I>::NoCustodian);
-            let admin = admin_option.unwrap();
-            let id = Self::get_new_asset_id(&owner)?;
+        pub fn create(
+            origin: OriginFor<T>,
+            id: AssetId,
+            admin: AccountIdLookupOf<T>,
+            min_balance: T::Balance,
+        ) -> DispatchResult {
+            let owner = T::CreateOrigin::ensure_origin(origin, &id)?;
+            let admin = T::Lookup::lookup(admin)?;
+
+            ensure!(!Asset::<T, I>::contains_key(&id), Error::<T, I>::InUse);
+            ensure!(!min_balance.is_zero(), Error::<T, I>::MinBalanceZero);
 
             let deposit = T::AssetDeposit::get();
             T::Currency::reserve(&owner, deposit)?;
 
             Asset::<T, I>::insert(
-                id,
+                id.clone(),
                 AssetDetails {
                     owner: owner.clone(),
                     issuer: admin.clone(),
                     admin: admin.clone(),
-                    freezer: admin,
+                    freezer: admin.clone(),
                     supply: Zero::zero(),
                     deposit,
-                    min_balance: One::one(),
+                    min_balance,
                     is_sufficient: false,
                     accounts: 0,
                     sufficients: 0,
                     approvals: 0,
+                    status: AssetStatus::Live,
                     is_frozen: false,
                 },
+            );
+            ensure!(
+                T::CallbackHandle::created(&id, &owner).is_ok(),
+                Error::<T, I>::CallbackFailed
             );
             Self::deposit_event(Event::Created {
                 asset_id: id,
                 creator: owner.clone(),
+                owner: admin,
             });
 
-            Self::do_set_metadata(id, &owner, name, symbol, 9)
+            Ok(())
         }
 
         /// Set project data to metadata of an asset.
@@ -745,16 +853,30 @@ pub mod pallet {
         ///
         /// Weight: `O(1)`
         ///
+        // #[pallet::call_index(5)]
+        // #[pallet::weight(T::WeightInfo::mint())]
+        // pub fn mint(
+        //     origin: OriginFor<T>,
+        //     id: AssetId,
+        //     #[pallet::compact] amount: T::Balance,
+        // ) -> DispatchResult {
+        //     let origin = ensure_signed(origin)?;
+        //     let asset_details = Asset::<T, I>::get(id).ok_or(Error::<T, I>::Unknown)?;
+        //     let beneficiary = asset_details.owner;
+        //     Self::do_mint(id, &beneficiary, amount, Some(origin))?;
+        //     Ok(())
+        // }
+
         #[pallet::call_index(5)]
         #[pallet::weight(T::WeightInfo::mint())]
         pub fn mint(
             origin: OriginFor<T>,
             id: AssetId,
+            beneficiary: AccountIdLookupOf<T>,
             #[pallet::compact] amount: T::Balance,
         ) -> DispatchResult {
             let origin = ensure_signed(origin)?;
-            let asset_details = Asset::<T, I>::get(id).ok_or(Error::<T, I>::Unknown)?;
-            let beneficiary = asset_details.owner;
+            let beneficiary = T::Lookup::lookup(beneficiary)?;
             Self::do_mint(id, &beneficiary, amount, Some(origin))?;
             Ok(())
         }
@@ -993,24 +1115,65 @@ pub mod pallet {
         /// Emits `Frozen`.
         ///
         /// Weight: `O(1)`
+        // #[pallet::call_index(11)]
+        // #[pallet::weight(T::WeightInfo::freeze())]
+        // pub fn freeze(
+        //     origin: OriginFor<T>,
+        //     id: AssetId,
+        //     who: <T::Lookup as StaticLookup>::Source,
+        // ) -> DispatchResult {
+        //     let origin = ensure_signed(origin)?;
+        //
+        //     let d = Asset::<T, I>::get(id).ok_or(Error::<T, I>::Unknown)?;
+        //     ensure!(origin == d.freezer, Error::<T, I>::NoPermission);
+        //     let who = T::Lookup::lookup(who)?;
+        //
+        //     Account::<T, I>::try_mutate(id, &who, |maybe_account| -> DispatchResult {
+        //         maybe_account
+        //             .as_mut()
+        //             .ok_or(Error::<T, I>::NoAccount)?
+        //             .is_frozen = true;
+        //         Ok(())
+        //     })?;
+        //
+        //     Self::deposit_event(Event::<T, I>::Frozen { asset_id: id, who });
+        //     Ok(())
+        // }
+
+        /// Disallow further unprivileged transfers of an asset `id` from an account `who`. `who`
+        /// must already exist as an entry in `Account`s of the asset. If you want to freeze an
+        /// account that does not have an entry, use `touch_other` first.
+        ///
+        /// Origin must be Signed and the sender should be the Freezer of the asset `id`.
+        ///
+        /// - `id`: The identifier of the asset to be frozen.
+        /// - `who`: The account to be frozen.
+        ///
+        /// Emits `Frozen`.
+        ///
+        /// Weight: `O(1)`
         #[pallet::call_index(11)]
         #[pallet::weight(T::WeightInfo::freeze())]
         pub fn freeze(
             origin: OriginFor<T>,
             id: AssetId,
-            who: <T::Lookup as StaticLookup>::Source,
+            who: AccountIdLookupOf<T>,
         ) -> DispatchResult {
             let origin = ensure_signed(origin)?;
 
-            let d = Asset::<T, I>::get(id).ok_or(Error::<T, I>::Unknown)?;
+            let d = Asset::<T, I>::get(&id).ok_or(Error::<T, I>::Unknown)?;
+            ensure!(
+                d.status == AssetStatus::Live || d.status == AssetStatus::Frozen,
+                Error::<T, I>::AssetNotLive
+            );
             ensure!(origin == d.freezer, Error::<T, I>::NoPermission);
             let who = T::Lookup::lookup(who)?;
 
-            Account::<T, I>::try_mutate(id, &who, |maybe_account| -> DispatchResult {
+            Account::<T, I>::try_mutate(&id, &who, |maybe_account| -> DispatchResult {
                 maybe_account
                     .as_mut()
                     .ok_or(Error::<T, I>::NoAccount)?
-                    .is_frozen = true;
+                    .status = AccountStatus::Frozen;
                 Ok(())
             })?;
 
@@ -1028,24 +1191,53 @@ pub mod pallet {
         /// Emits `Thawed`.
         ///
         /// Weight: `O(1)`
+        // #[pallet::call_index(12)]
+        // #[pallet::weight(T::WeightInfo::thaw())]
+        // pub fn thaw(
+        //     origin: OriginFor<T>,
+        //     id: AssetId,
+        //     who: <T::Lookup as StaticLookup>::Source,
+        // ) -> DispatchResult {
+        //     let origin = ensure_signed(origin)?;
+        //
+        //     let details = Asset::<T, I>::get(id).ok_or(Error::<T, I>::Unknown)?;
+        //     ensure!(origin == details.admin, Error::<T, I>::NoPermission);
+        //     let who = T::Lookup::lookup(who)?;
+        //
+        //     Account::<T, I>::try_mutate(id, &who, |maybe_account| -> DispatchResult {
+        //         maybe_account
+        //             .as_mut()
+        //             .ok_or(Error::<T, I>::NoAccount)?
+        //             .is_frozen = false;
+        //         Ok(())
+        //     })?;
+        //
+        //     Self::deposit_event(Event::<T, I>::Thawed { asset_id: id, who });
+        //     Ok(())
+        // }
+
         #[pallet::call_index(12)]
         #[pallet::weight(T::WeightInfo::thaw())]
         pub fn thaw(
             origin: OriginFor<T>,
             id: AssetId,
-            who: <T::Lookup as StaticLookup>::Source,
+            who: AccountIdLookupOf<T>,
         ) -> DispatchResult {
             let origin = ensure_signed(origin)?;
 
-            let details = Asset::<T, I>::get(id).ok_or(Error::<T, I>::Unknown)?;
+            let details = Asset::<T, I>::get(&id).ok_or(Error::<T, I>::Unknown)?;
+            ensure!(
+                details.status == AssetStatus::Live || details.status == AssetStatus::Frozen,
+                Error::<T, I>::AssetNotLive
+            );
             ensure!(origin == details.admin, Error::<T, I>::NoPermission);
             let who = T::Lookup::lookup(who)?;
 
-            Account::<T, I>::try_mutate(id, &who, |maybe_account| -> DispatchResult {
+            Account::<T, I>::try_mutate(&id, &who, |maybe_account| -> DispatchResult {
                 maybe_account
                     .as_mut()
                     .ok_or(Error::<T, I>::NoAccount)?
-                    .is_frozen = false;
+                    .status = AccountStatus::Liquid;
                 Ok(())
             })?;
 
@@ -1463,7 +1655,9 @@ pub mod pallet {
         #[pallet::call_index(23)]
         #[pallet::weight(T::WeightInfo::mint())]
         pub fn touch(origin: OriginFor<T>, id: AssetId) -> DispatchResult {
-            Self::do_touch(id, ensure_signed(origin)?)
+            // Self::do_touch(id, ensure_signed(origin)?)
+            let who = ensure_signed(origin)?;
+            Self::do_touch(id, who.clone(), who, false)
         }
 
         /// Return the deposit (if any) of an asset account.

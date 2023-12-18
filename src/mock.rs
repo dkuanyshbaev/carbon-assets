@@ -20,12 +20,14 @@
 use super::*;
 use crate as pallet_assets;
 
+use codec::Encode;
 use frame_support::{
     construct_runtime,
-    traits::{ConstU32, ConstU64},
+    traits::{AsEnsureOriginWithArg, ConstU32, ConstU64},
 };
 use frame_support_test::TestRandomness;
 use sp_core::H256;
+use sp_io::storage;
 use sp_runtime::traits::{BlakeTwo256, IdentityLookup};
 use sp_runtime::BuildStorage;
 
@@ -83,10 +85,54 @@ impl pallet_balances::Config for Test {
     type MaxFreezes = ConstU32<0>;
 }
 
+pub struct AssetsCallbackHandle;
+impl AssetsCallback<AssetId, u64> for AssetsCallbackHandle {
+    fn created(_id: &AssetId, _owner: &u64) -> Result<(), ()> {
+        if Self::should_err() {
+            Err(())
+        } else {
+            storage::set(Self::CREATED.as_bytes(), &().encode());
+            Ok(())
+        }
+    }
+
+    fn destroyed(_id: &AssetId) -> Result<(), ()> {
+        if Self::should_err() {
+            Err(())
+        } else {
+            storage::set(Self::DESTROYED.as_bytes(), &().encode());
+            Ok(())
+        }
+    }
+}
+
+impl AssetsCallbackHandle {
+    pub const CREATED: &'static str = "asset_created";
+    pub const DESTROYED: &'static str = "asset_destroyed";
+
+    const RETURN_ERROR: &'static str = "return_error";
+
+    // Configures `Self` to return `Ok` when callbacks are invoked
+    pub fn set_return_ok() {
+        storage::clear(Self::RETURN_ERROR.as_bytes());
+    }
+
+    // Configures `Self` to return `Err` when callbacks are invoked
+    pub fn set_return_error() {
+        storage::set(Self::RETURN_ERROR.as_bytes(), &().encode());
+    }
+
+    // If `true`, callback should return `Err`, `Ok` otherwise.
+    fn should_err() -> bool {
+        storage::exists(Self::RETURN_ERROR.as_bytes())
+    }
+}
+
 impl Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type Balance = u64;
     type Currency = Balances;
+    type CreateOrigin = AsEnsureOriginWithArg<frame_system::EnsureSigned<u64>>;
     type ForceOrigin = frame_system::EnsureRoot<u64>;
     type AssetDeposit = ConstU64<1>;
     type AssetAccountDeposit = ConstU64<10>;
@@ -96,6 +142,7 @@ impl Config for Test {
     type StringLimit = ConstU32<50>;
     type Freezer = TestFreezer;
     type WeightInfo = ();
+    type CallbackHandle = AssetsCallbackHandle;
     type Extra = ();
     type Randomness = TestRandomness<Self>;
 }

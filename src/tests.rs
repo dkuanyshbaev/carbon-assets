@@ -37,9 +37,9 @@ fn can_mint_only_to_owner() {
             true,
             1
         ));
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 100));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 1, 100));
         assert_eq!(Assets::balance(ZERO_ID, 1), 100);
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 100));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 1, 100));
         assert_eq!(Assets::balance(ZERO_ID, 2), 0);
         assert_eq!(Assets::balance(ZERO_ID, 1), 200);
     });
@@ -70,16 +70,16 @@ fn minting_too_many_insufficient_assets_fails() {
             1
         ));
         Balances::make_free_balance_be(&1, 100);
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 100));
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ONE_ID, 100));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 1, 100));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ONE_ID, 1, 100));
         assert_noop!(
-            Assets::mint(RuntimeOrigin::signed(1), TWO_ID, 100),
+            Assets::mint(RuntimeOrigin::signed(1), TWO_ID, 1, 100),
             TokenError::CannotCreate
         );
 
         Balances::make_free_balance_be(&2, 1);
         assert_ok!(Assets::transfer(RuntimeOrigin::signed(1), ZERO_ID, 2, 100));
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), TWO_ID, 100));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), TWO_ID, 1, 100));
     });
 }
 
@@ -108,17 +108,17 @@ fn minting_insufficient_asset_with_deposit_should_work_when_consumers_exhausted(
             1
         ));
         Balances::make_free_balance_be(&1, 100);
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 100));
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ONE_ID, 100));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 1, 100));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ONE_ID, 1, 100));
         assert_noop!(
-            Assets::mint(RuntimeOrigin::signed(1), TWO_ID, 100),
+            Assets::mint(RuntimeOrigin::signed(1), TWO_ID, 1, 100),
             TokenError::CannotCreate
         );
 
         assert_ok!(Assets::touch(RuntimeOrigin::signed(1), TWO_ID));
         assert_eq!(Balances::reserved_balance(&1), 10);
 
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), TWO_ID, 100));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), TWO_ID, 1, 100));
     });
 }
 
@@ -133,14 +133,14 @@ fn minting_insufficient_assets_with_deposit_without_consumer_should_work() {
             1
         ));
         assert_noop!(
-            Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 100),
+            Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 1, 100),
             TokenError::CannotCreate
         );
         Balances::make_free_balance_be(&1, 100);
         assert_ok!(Assets::touch(RuntimeOrigin::signed(1), ZERO_ID));
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 100));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 1, 100));
         assert_eq!(Balances::reserved_balance(&1), 10);
-        assert_eq!(System::consumers(&1), 0);
+        assert_eq!(System::consumers(&1), 1);
     });
 }
 
@@ -156,7 +156,7 @@ fn refunding_asset_deposit_with_burn_should_work() {
         ));
         Balances::make_free_balance_be(&1, 100);
         assert_ok!(Assets::touch(RuntimeOrigin::signed(1), ZERO_ID));
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 100));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 1, 100));
         assert_ok!(Assets::refund(RuntimeOrigin::signed(1), ZERO_ID, true));
         assert_eq!(Balances::reserved_balance(&1), 0);
         assert_eq!(Assets::balance(ONE_ID, 0), 0);
@@ -175,7 +175,7 @@ fn refunding_asset_deposit_with_burn_disallowed_should_fail() {
         ));
         Balances::make_free_balance_be(&1, 100);
         assert_ok!(Assets::touch(RuntimeOrigin::signed(1), ZERO_ID));
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 100));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 1, 100));
         assert_noop!(
             Assets::refund(RuntimeOrigin::signed(1), ZERO_ID, false),
             Error::<Test>::WouldBurn
@@ -194,12 +194,12 @@ fn refunding_asset_deposit_without_burn_should_work() {
             1
         ));
         assert_noop!(
-            Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 100),
+            Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 1, 100),
             TokenError::CannotCreate
         );
         Balances::make_free_balance_be(&1, 100);
         assert_ok!(Assets::touch(RuntimeOrigin::signed(1), ZERO_ID));
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 100));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 1, 100));
         Balances::make_free_balance_be(&2, 100);
         assert_ok!(Assets::transfer(RuntimeOrigin::signed(1), ZERO_ID, 2, 100));
         assert_eq!(Assets::balance(ZERO_ID, 2), 100);
@@ -224,7 +224,7 @@ fn refunding_calls_died_hook() {
         ));
         Balances::make_free_balance_be(&1, 100);
         assert_ok!(Assets::touch(RuntimeOrigin::signed(1), ZERO_ID));
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 100));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 1, 100));
         assert_ok!(Assets::refund(RuntimeOrigin::signed(1), ZERO_ID, true));
 
         assert_eq!(Asset::<Test>::get(ZERO_ID).unwrap().accounts, 0);
@@ -248,8 +248,8 @@ fn approval_lifecycle_works() {
             true,
             1
         ));
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 100));
-        Balances::make_free_balance_be(&1, 1);
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 1, 100));
+        Balances::make_free_balance_be(&1, 2);
         assert_ok!(Assets::approve_transfer(
             RuntimeOrigin::signed(1),
             ZERO_ID,
@@ -294,8 +294,8 @@ fn transfer_approved_all_funds() {
             true,
             1
         ));
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 100));
-        Balances::make_free_balance_be(&1, 1);
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 1, 100));
+        Balances::make_free_balance_be(&1, 2);
         assert_ok!(Assets::approve_transfer(
             RuntimeOrigin::signed(1),
             ZERO_ID,
@@ -330,14 +330,14 @@ fn approval_deposits_work() {
             true,
             1
         ));
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 100));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 1, 100));
         let e = BalancesError::<Test>::InsufficientBalance;
         assert_noop!(
             Assets::approve_transfer(RuntimeOrigin::signed(1), ZERO_ID, 2, 50),
             e
         );
 
-        Balances::make_free_balance_be(&1, 1);
+        Balances::make_free_balance_be(&1, 2);
         assert_ok!(Assets::approve_transfer(
             RuntimeOrigin::signed(1),
             ZERO_ID,
@@ -380,8 +380,8 @@ fn cannot_transfer_more_than_approved() {
             true,
             1
         ));
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 100));
-        Balances::make_free_balance_be(&1, 1);
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 1, 100));
+        Balances::make_free_balance_be(&1, 2);
         assert_ok!(Assets::approve_transfer(
             RuntimeOrigin::signed(1),
             ZERO_ID,
@@ -406,8 +406,8 @@ fn cannot_transfer_more_than_exists() {
             true,
             1
         ));
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 100));
-        Balances::make_free_balance_be(&1, 1);
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 1, 100));
+        Balances::make_free_balance_be(&1, 2);
         assert_ok!(Assets::approve_transfer(
             RuntimeOrigin::signed(1),
             ZERO_ID,
@@ -432,8 +432,8 @@ fn cancel_approval_works() {
             true,
             1
         ));
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 100));
-        Balances::make_free_balance_be(&1, 1);
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 1, 100));
+        Balances::make_free_balance_be(&1, 2);
         assert_ok!(Assets::approve_transfer(
             RuntimeOrigin::signed(1),
             ZERO_ID,
@@ -477,8 +477,8 @@ fn force_cancel_approval_works() {
             true,
             1
         ));
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 100));
-        Balances::make_free_balance_be(&1, 1);
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 1, 100));
+        Balances::make_free_balance_be(&1, 2);
         assert_ok!(Assets::approve_transfer(
             RuntimeOrigin::signed(1),
             ZERO_ID,
@@ -536,9 +536,9 @@ fn lifecycle_should_work() {
         assert!(Metadata::<Test>::contains_key(id));
 
         Balances::make_free_balance_be(&10, 100);
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), id, 100));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), id, 10, 100));
         Balances::make_free_balance_be(&20, 100);
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), id, 100));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), id, 20, 100));
         assert_eq!(Account::<Test>::iter_prefix(id).count(), 1);
 
         let w = Asset::<Test>::get(id).unwrap().destroy_witness();
@@ -562,8 +562,8 @@ fn lifecycle_should_work() {
         assert_eq!(Balances::reserved_balance(&1), 12);
         assert!(Metadata::<Test>::contains_key(second_id));
 
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), second_id, 100));
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), second_id, 100));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), second_id, 10, 100));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), second_id, 20, 100));
         assert_eq!(Account::<Test>::iter_prefix(second_id).count(), 1);
 
         let w = Asset::<Test>::get(second_id).unwrap().destroy_witness();
@@ -588,7 +588,7 @@ fn destroy_with_bad_witness_should_not_work() {
             1
         ));
         let mut w = Asset::<Test>::get(ZERO_ID).unwrap().destroy_witness();
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 100));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 1, 100));
         // witness too low
         assert_noop!(
             Assets::destroy(RuntimeOrigin::signed(1), ZERO_ID, w),
@@ -612,7 +612,7 @@ fn destroy_should_refund_approvals() {
             true,
             1
         ));
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 100));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 10, 100));
         assert_ok!(Assets::approve_transfer(
             RuntimeOrigin::signed(1),
             ZERO_ID,
@@ -654,7 +654,7 @@ fn non_providing_should_not_work() {
         ));
 
         Balances::make_free_balance_be(&0, 100);
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(0), ZERO_ID, 100));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(0), ZERO_ID, 0, 100));
 
         // Cannot transfer into account 1 since it doesn't (yet) exist.
         assert_noop!(
@@ -693,10 +693,10 @@ fn min_balance_should_work() {
 
         // Cannot create a new account with a balance that is below minimum...
         assert_noop!(
-            Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 9),
+            Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 2, 9),
             TokenError::BelowMinimum
         );
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 100));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 1, 100));
         assert_eq!(Asset::<Test>::get(ZERO_ID).unwrap().accounts, 1);
         assert_noop!(
             Assets::transfer(RuntimeOrigin::signed(1), ZERO_ID, 2, 9),
@@ -735,8 +735,8 @@ fn min_balance_should_work() {
         assert_eq!(take_hooks(), vec![Hook::Died(ZERO_ID, 1)]);
 
         // Death by `transfer_approved`.
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 100));
-        Balances::make_free_balance_be(&1, 1);
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 1, 100));
+        Balances::make_free_balance_be(&1, 2);
         assert_ok!(Assets::approve_transfer(
             RuntimeOrigin::signed(1),
             ZERO_ID,
@@ -764,7 +764,7 @@ fn querying_total_supply_should_work() {
             true,
             1
         ));
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 100));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 1, 100));
         assert_eq!(Assets::balance(ZERO_ID, 1), 100);
         assert_ok!(Assets::transfer(RuntimeOrigin::signed(1), ZERO_ID, 2, 50));
         assert_eq!(Assets::balance(ZERO_ID, 1), 50);
@@ -788,7 +788,7 @@ fn transferring_amount_below_available_balance_should_work() {
             true,
             1
         ));
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 100));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 1, 100));
         assert_eq!(Assets::balance(ZERO_ID, 1), 100);
         assert_ok!(Assets::transfer(RuntimeOrigin::signed(1), ZERO_ID, 2, 50));
         assert_eq!(Assets::balance(ZERO_ID, 1), 50);
@@ -806,7 +806,7 @@ fn transferring_enough_to_kill_source_when_keep_alive_should_fail() {
             true,
             10
         ));
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 100));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 1, 100));
         assert_eq!(Assets::balance(ZERO_ID, 1), 100);
         assert_noop!(
             Assets::transfer_keep_alive(RuntimeOrigin::signed(1), ZERO_ID, 2, 91),
@@ -834,7 +834,7 @@ fn transferring_frozen_user_should_not_work() {
             true,
             1
         ));
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 100));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 1, 100));
         assert_eq!(Assets::balance(ZERO_ID, 1), 100);
         assert_ok!(Assets::freeze(RuntimeOrigin::signed(1), ZERO_ID, 1));
         assert_noop!(
@@ -856,7 +856,7 @@ fn transferring_frozen_asset_should_not_work() {
             true,
             1
         ));
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 100));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 1, 100));
         assert_eq!(Assets::balance(ZERO_ID, 1), 100);
         assert_ok!(Assets::freeze_asset(RuntimeOrigin::signed(1), ZERO_ID));
         assert_noop!(
@@ -879,7 +879,7 @@ fn approve_transfer_frozen_asset_should_not_work() {
             true,
             1
         ));
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 100));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 1, 100));
         assert_eq!(Assets::balance(ZERO_ID, 1), 100);
         assert_ok!(Assets::freeze_asset(RuntimeOrigin::signed(1), ZERO_ID));
         assert_noop!(
@@ -906,7 +906,7 @@ fn origin_guards_should_work() {
             true,
             1
         ));
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 100));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 1, 100));
         assert_noop!(
             Assets::transfer_ownership(RuntimeOrigin::signed(2), ZERO_ID, 2),
             Error::<Test>::NoPermission
@@ -920,7 +920,7 @@ fn origin_guards_should_work() {
             Error::<Test>::NoPermission
         );
         assert_noop!(
-            Assets::mint(RuntimeOrigin::signed(2), ZERO_ID, 100),
+            Assets::mint(RuntimeOrigin::signed(2), ZERO_ID, 2, 100),
             Error::<Test>::NoPermission
         );
         assert_noop!(
@@ -979,8 +979,8 @@ fn transferring_to_frozen_account_should_work() {
             true,
             1
         ));
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 100));
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 100));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 1, 100));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 2, 100));
         assert_eq!(Assets::balance(ZERO_ID, 1), 200);
         assert_ok!(Assets::transfer(RuntimeOrigin::signed(1), ZERO_ID, 2, 5));
         assert_ok!(Assets::freeze(RuntimeOrigin::signed(1), ZERO_ID, 2));
@@ -999,7 +999,7 @@ fn transferring_amount_more_than_available_balance_should_not_work() {
             true,
             1
         ));
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 100));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 1, 100));
         assert_eq!(Assets::balance(ZERO_ID, 1), 100);
         assert_ok!(Assets::transfer(RuntimeOrigin::signed(1), ZERO_ID, 2, 50));
         assert_eq!(Assets::balance(ZERO_ID, 1), 50);
@@ -1027,7 +1027,7 @@ fn transferring_less_than_one_unit_is_fine() {
             true,
             1
         ));
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 100));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 1, 100));
         assert_eq!(Assets::balance(ZERO_ID, 1), 100);
         assert_ok!(Assets::transfer(RuntimeOrigin::signed(1), ZERO_ID, 2, 0));
         // `ForceCreated` and `Issued` but no `Transferred` event.
@@ -1045,7 +1045,7 @@ fn transferring_more_units_than_total_supply_should_not_work() {
             true,
             1
         ));
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 100));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 1, 100));
         assert_eq!(Assets::balance(ZERO_ID, 1), 100);
         assert_noop!(
             Assets::transfer(RuntimeOrigin::signed(1), ZERO_ID, 2, 101),
@@ -1064,7 +1064,7 @@ fn burning_asset_balance_with_zero_balance_does_nothing() {
             true,
             1
         ));
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 100));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 1, 100));
         assert_eq!(Assets::balance(ZERO_ID, 2), 0);
         assert_noop!(
             Assets::burn(RuntimeOrigin::signed(1), ZERO_ID, 2, u64::MAX),
@@ -1087,8 +1087,8 @@ fn destroy_calls_died_hooks() {
             50
         ));
         // Create account 1 and 2.
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 100));
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 100));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 1, 100));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 2, 100));
         // Destroy the asset.
         let w = Asset::<Test>::get(ZERO_ID).unwrap().destroy_witness();
         assert_ok!(Assets::destroy(RuntimeOrigin::signed(1), ZERO_ID, w));
@@ -1109,7 +1109,7 @@ fn freezer_should_work() {
             true,
             10
         ));
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 100));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 1, 100));
         assert_eq!(Assets::balance(ZERO_ID, 1), 100);
 
         // freeze 50 of it.
@@ -1312,19 +1312,82 @@ fn force_metadata_should_work() {
     });
 }
 
+// #[test]
+// fn force_asset_status_should_work() {
+//     new_test_ext().execute_with(|| {
+//         Balances::make_free_balance_be(&1, 100);
+//         Balances::make_free_balance_be(&2, 10);
+//         assert_ok!(Assets::create(
+//             RuntimeOrigin::signed(1),
+//             "Token".as_bytes().to_vec(),
+//             "Token".as_bytes().to_vec()
+//         ));
+//         let id = Assets::get_current_asset_id(&1).unwrap();
+//         assert_ok!(Assets::mint(RuntimeOrigin::signed(1), id, 200));
+//         assert_ok!(Assets::transfer(RuntimeOrigin::signed(1), id, 2, 150));
+//
+//         // force asset status to change min_balance > balance
+//         assert_ok!(Assets::force_asset_status(
+//             RuntimeOrigin::root(),
+//             id,
+//             1,
+//             1,
+//             1,
+//             1,
+//             100,
+//             true,
+//             false
+//         ));
+//         assert_eq!(Assets::balance(id, 1), 50);
+//
+//         // account can recieve assets for balance < min_balance
+//         assert_ok!(Assets::transfer(RuntimeOrigin::signed(2), id, 1, 1));
+//         assert_eq!(Assets::balance(id, 1), 51);
+//
+//         // account on outbound transfer will cleanup for balance < min_balance
+//         assert_ok!(Assets::transfer(RuntimeOrigin::signed(1), id, 2, 1));
+//         assert_eq!(Assets::balance(id, 1), 0);
+//
+//         // won't create new account with balance below min_balance
+//         assert_noop!(
+//             Assets::transfer(RuntimeOrigin::signed(2), id, 3, 50),
+//             TokenError::BelowMinimum
+//         );
+//
+//         // force asset status will not execute for non-existent class
+//         assert_noop!(
+//             Assets::force_asset_status(RuntimeOrigin::root(), ONE_ID, 1, 1, 1, 1, 90, true, false),
+//             Error::<Test>::Unknown
+//         );
+//
+//         // account drains to completion when funds dip below min_balance
+//         assert_ok!(Assets::force_asset_status(
+//             RuntimeOrigin::root(),
+//             id,
+//             1,
+//             1,
+//             1,
+//             1,
+//             110,
+//             true,
+//             false
+//         ));
+//         assert_ok!(Assets::transfer(RuntimeOrigin::signed(2), id, 1, 110));
+//         assert_eq!(Assets::balance(id, 1), 200);
+//         assert_eq!(Assets::balance(id, 2), 0);
+//         assert_eq!(Assets::total_supply(id), 200);
+//     });
+// }
+
 #[test]
 fn force_asset_status_should_work() {
     new_test_ext().execute_with(|| {
-        Balances::make_free_balance_be(&1, 100);
+        Balances::make_free_balance_be(&1, 10);
         Balances::make_free_balance_be(&2, 10);
-        assert_ok!(Assets::create(
-            RuntimeOrigin::signed(1),
-            "Token".as_bytes().to_vec(),
-            "Token".as_bytes().to_vec()
-        ));
         let id = Assets::get_current_asset_id(&1).unwrap();
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), id, 200));
-        assert_ok!(Assets::transfer(RuntimeOrigin::signed(1), id, 2, 150));
+        assert_ok!(Assets::create(RuntimeOrigin::signed(1), id, 1, 30));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), id, 1, 50));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), id, 2, 150));
 
         // force asset status to change min_balance > balance
         assert_ok!(Assets::force_asset_status(
@@ -1343,7 +1406,6 @@ fn force_asset_status_should_work() {
         // account can recieve assets for balance < min_balance
         assert_ok!(Assets::transfer(RuntimeOrigin::signed(2), id, 1, 1));
         assert_eq!(Assets::balance(id, 1), 51);
-
         // account on outbound transfer will cleanup for balance < min_balance
         assert_ok!(Assets::transfer(RuntimeOrigin::signed(1), id, 2, 1));
         assert_eq!(Assets::balance(id, 1), 0);
@@ -1465,8 +1527,8 @@ fn querying_allowance_should_work() {
             true,
             1
         ));
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 100));
-        Balances::make_free_balance_be(&1, 1);
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 1, 100));
+        Balances::make_free_balance_be(&1, 2);
         assert_ok!(Assets::approve(ZERO_ID, &1, &2, 50));
         assert_eq!(Assets::allowance(ZERO_ID, &1, &2), 50);
         // Transfer asset 0, from owner 1 and delegate 2 to destination 3
@@ -1486,7 +1548,7 @@ fn transfer_large_asset() {
             true,
             1
         ));
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, amount));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(1), ZERO_ID, 1, amount));
         assert_ok!(Assets::transfer(
             RuntimeOrigin::signed(1),
             ZERO_ID,
@@ -1561,7 +1623,7 @@ fn create_asset_ensure_user_cannot_mint() {
         let id = Assets::get_current_asset_id(&user).unwrap();
 
         assert_noop!(
-            Assets::mint(RuntimeOrigin::signed(user), id, 500),
+            Assets::mint(RuntimeOrigin::signed(user), id, 1, 500),
             Error::<Test>::NoPermission
         );
     })
@@ -1712,7 +1774,7 @@ fn set_project_data_after_mint_fail() {
         assert!(metadata.url.len() == 4);
         assert!(metadata.data_ipfs.len() == 4);
 
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(CUSTODIAN), id, 100));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(CUSTODIAN), id, 1, 100));
         assert_noop!(
             Assets::set_project_data(
                 RuntimeOrigin::signed(user),
@@ -1785,7 +1847,7 @@ fn custodian_mint() {
             vec![b'4', b'h', b'6', b'g']
         ));
 
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(CUSTODIAN), id, 500));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(CUSTODIAN), id, 1, 500));
         assert_eq!(500, Assets::balance(id, user));
     })
 }
@@ -1810,7 +1872,7 @@ fn not_custodian_cannot_mint() {
         ));
 
         assert_noop!(
-            Assets::mint(RuntimeOrigin::signed(3), id, 500),
+            Assets::mint(RuntimeOrigin::signed(3), id, 1, 500),
             Error::<Test>::NoPermission
         );
     })
@@ -1838,7 +1900,7 @@ fn custodian_full_circle() {
             vec![b'4', b'h', b'6', b'g']
         ));
 
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(CUSTODIAN), id, 1500));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(CUSTODIAN), id, 1, 1500));
         assert_eq!(1500, Assets::balance(id, CUSTODIAN));
 
         assert_ok!(Assets::transfer(
@@ -1893,7 +1955,7 @@ fn custodian_burn() {
             vec![b'4', b'h', b'6', b'g']
         ));
 
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(CUSTODIAN), id, 500));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(CUSTODIAN), id, 1, 500));
         assert_eq!(500, Assets::balance(id, user));
 
         assert_ok!(Assets::burn(
@@ -1926,7 +1988,7 @@ fn custodian_burn_several_times() {
             vec![b'4', b'h', b'6', b'g']
         ));
 
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(CUSTODIAN), id, 500));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(CUSTODIAN), id, 1, 500));
         assert_eq!(500, Assets::balance(id, user));
 
         assert_ok!(Assets::burn(
@@ -1968,7 +2030,7 @@ fn user_self_burn() {
             vec![b'4', b'h', b'6', b'g']
         ));
 
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(CUSTODIAN), id, 500));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(CUSTODIAN), id, 1, 500));
         assert_eq!(500, Assets::balance(id, user));
 
         assert_ok!(Assets::self_burn(RuntimeOrigin::signed(user), id, 100));
@@ -2001,7 +2063,7 @@ fn user_cannot_self_burn_more() {
             vec![b'4', b'h', b'6', b'g']
         ));
 
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(CUSTODIAN), id, 500));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(CUSTODIAN), id, 1, 500));
         assert_eq!(500, Assets::balance(id, user));
 
         assert_ok!(Assets::self_burn(RuntimeOrigin::signed(user), id, 100));
@@ -2037,7 +2099,7 @@ fn custodian_cannot_burn_more() {
             vec![b'4', b'h', b'6', b'g']
         ));
 
-        assert_ok!(Assets::mint(RuntimeOrigin::signed(CUSTODIAN), id, 500));
+        assert_ok!(Assets::mint(RuntimeOrigin::signed(CUSTODIAN), id, 1, 500));
         assert_eq!(500, Assets::balance(id, user));
 
         assert_ok!(Assets::self_burn(RuntimeOrigin::signed(user), id, 100));
