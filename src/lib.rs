@@ -1673,5 +1673,33 @@ pub mod pallet {
         pub fn refund(origin: OriginFor<T>, id: AssetId, allow_burn: bool) -> DispatchResult {
             Self::do_refund(id, ensure_signed(origin)?, allow_burn)
         }
+        /// Set the metadata for an asset.
+        ///
+        /// Origin must be Signed and the sender should be the Owner of the asset `id`.
+        ///
+        /// Funds of sender are reserved according to the formula:
+        /// `MetadataDepositBase + MetadataDepositPerByte * (name.len + symbol.len)` taking into
+        /// account any already reserved funds.
+        ///
+        /// - `id`: The identifier of the asset to update.
+        /// - `name`: The user friendly name of this asset. Limited in length by `StringLimit`.
+        /// - `symbol`: The exchange symbol for this asset. Limited in length by `StringLimit`.
+        /// - `decimals`: The number of decimals this asset uses to represent one unit.
+        ///
+        /// Emits `MetadataSet`.
+        ///
+        /// Weight: `O(1)`
+        #[pallet::call_index(25)]
+        #[pallet::weight(T::WeightInfo::set_metadata(name.len() as u32, symbol.len() as u32))]
+        pub fn set_metadata(
+            origin: OriginFor<T>,
+            id: AssetId,
+            name: Vec<u8>,
+            symbol: Vec<u8>,
+            decimals: u8,
+        ) -> DispatchResult {
+            let origin = ensure_signed(origin)?;
+            Self::do_set_metadata(id, &origin, name, symbol, decimals)
+        }
     }
 }

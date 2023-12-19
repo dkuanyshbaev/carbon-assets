@@ -953,6 +953,72 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     }
 
     /// Do set metadata
+    // pub(super) fn do_set_metadata(
+    //     id: AssetId,
+    //     from: &T::AccountId,
+    //     name: Vec<u8>,
+    //     symbol: Vec<u8>,
+    //     decimals: u8,
+    // ) -> DispatchResult {
+    //     let bounded_name: BoundedVec<u8, T::StringLimit> = name
+    //         .clone()
+    //         .try_into()
+    //         .map_err(|_| Error::<T, I>::BadMetadata)?;
+    //     let bounded_symbol: BoundedVec<u8, T::StringLimit> = symbol
+    //         .clone()
+    //         .try_into()
+    //         .map_err(|_| Error::<T, I>::BadMetadata)?;
+    //     let bounded_url: BoundedVec<u8, T::StringLimit> = ""
+    //         .as_bytes()
+    //         .to_vec()
+    //         .try_into()
+    //         .map_err(|_| Error::<T, I>::BadMetadata)?;
+    //     let bounded_data_ipfs: BoundedVec<u8, T::StringLimit> =
+    //         "".as_bytes()
+    //             .to_vec()
+    //             .try_into()
+    //             .map_err(|_| Error::<T, I>::BadMetadata)?;
+    //
+    //     let d = Asset::<T, I>::get(id).ok_or(Error::<T, I>::Unknown)?;
+    //     ensure!(from == &d.owner, Error::<T, I>::NoPermission);
+    //
+    //     Metadata::<T, I>::try_mutate_exists(id, |metadata| {
+    //         ensure!(
+    //             metadata.as_ref().map_or(true, |m| !m.is_frozen),
+    //             Error::<T, I>::NoPermission
+    //         );
+    //
+    //         let old_deposit = metadata.take().map_or(Zero::zero(), |m| m.deposit);
+    //         let new_deposit = T::MetadataDepositPerByte::get()
+    //             .saturating_mul(((name.len() + symbol.len()) as u32).into())
+    //             .saturating_add(T::MetadataDepositBase::get());
+    //
+    //         if new_deposit > old_deposit {
+    //             T::Currency::reserve(from, new_deposit - old_deposit)?;
+    //         } else {
+    //             T::Currency::unreserve(from, old_deposit - new_deposit);
+    //         }
+    //
+    //         *metadata = Some(AssetMetadata {
+    //             deposit: new_deposit,
+    //             url: bounded_url,
+    //             data_ipfs: bounded_data_ipfs,
+    //             name: bounded_name,
+    //             symbol: bounded_symbol,
+    //             decimals,
+    //             is_frozen: false,
+    //         });
+    //
+    //         Self::deposit_event(Event::MetadataSet {
+    //             asset_id: id,
+    //             name,
+    //             symbol,
+    //             decimals,
+    //             is_frozen: false,
+    //         });
+    //         Ok(())
+    //     })
+    // }
     pub(super) fn do_set_metadata(
         id: AssetId,
         from: &T::AccountId,
@@ -960,14 +1026,6 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
         symbol: Vec<u8>,
         decimals: u8,
     ) -> DispatchResult {
-        let bounded_name: BoundedVec<u8, T::StringLimit> = name
-            .clone()
-            .try_into()
-            .map_err(|_| Error::<T, I>::BadMetadata)?;
-        let bounded_symbol: BoundedVec<u8, T::StringLimit> = symbol
-            .clone()
-            .try_into()
-            .map_err(|_| Error::<T, I>::BadMetadata)?;
         let bounded_url: BoundedVec<u8, T::StringLimit> = ""
             .as_bytes()
             .to_vec()
@@ -978,20 +1036,27 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                 .to_vec()
                 .try_into()
                 .map_err(|_| Error::<T, I>::BadMetadata)?;
+        let bounded_name: BoundedVec<u8, T::StringLimit> = name
+            .clone()
+            .try_into()
+            .map_err(|_| Error::<T, I>::BadMetadata)?;
+        let bounded_symbol: BoundedVec<u8, T::StringLimit> = symbol
+            .clone()
+            .try_into()
+            .map_err(|_| Error::<T, I>::BadMetadata)?;
 
-        let d = Asset::<T, I>::get(id).ok_or(Error::<T, I>::Unknown)?;
+        let d = Asset::<T, I>::get(&id).ok_or(Error::<T, I>::Unknown)?;
+        ensure!(d.status == AssetStatus::Live, Error::<T, I>::AssetNotLive);
         ensure!(from == &d.owner, Error::<T, I>::NoPermission);
 
-        Metadata::<T, I>::try_mutate_exists(id, |metadata| {
+        Metadata::<T, I>::try_mutate_exists(id.clone(), |metadata| {
             ensure!(
                 metadata.as_ref().map_or(true, |m| !m.is_frozen),
                 Error::<T, I>::NoPermission
             );
 
             let old_deposit = metadata.take().map_or(Zero::zero(), |m| m.deposit);
-            let new_deposit = T::MetadataDepositPerByte::get()
-                .saturating_mul(((name.len() + symbol.len()) as u32).into())
-                .saturating_add(T::MetadataDepositBase::get());
+            let new_deposit = Self::calc_metadata_deposit(&name, &symbol);
 
             if new_deposit > old_deposit {
                 T::Currency::reserve(from, new_deposit - old_deposit)?;
@@ -1000,9 +1065,9 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
             }
 
             *metadata = Some(AssetMetadata {
-                deposit: new_deposit,
-                url: bounded_url,
                 data_ipfs: bounded_data_ipfs,
+                url: bounded_url,
+                deposit: new_deposit,
                 name: bounded_name,
                 symbol: bounded_symbol,
                 decimals,
@@ -1018,6 +1083,13 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
             });
             Ok(())
         })
+    }
+
+    /// Calculate the metadata deposit for the provided data.
+    pub(super) fn calc_metadata_deposit(name: &[u8], symbol: &[u8]) -> DepositBalanceOf<T, I> {
+        T::MetadataDepositPerByte::get()
+            .saturating_mul(((name.len() + symbol.len()) as u32).into())
+            .saturating_add(T::MetadataDepositBase::get())
     }
 
     /// Update metadata with project ipfs info

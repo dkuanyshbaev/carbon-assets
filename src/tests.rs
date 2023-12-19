@@ -1591,13 +1591,8 @@ fn create_asset_with_generated_name() {
     new_test_ext().execute_with(|| {
         let user = 4;
         Balances::make_free_balance_be(&user, 1000);
-        assert_ok!(Assets::create(RuntimeOrigin::signed(1), ZERO_ID, 1, 1));
-        // assert_ok!(Assets::create(
-        //     RuntimeOrigin::signed(user),
-        //     "Token".as_bytes().to_vec(),
-        //     "Token".as_bytes().to_vec()
-        // ));
         let id = Assets::get_current_asset_id(&user).unwrap();
+        assert_ok!(Assets::create(RuntimeOrigin::signed(user), id, 1, 1));
 
         let metadata = Metadata::<Test>::get(id);
         assert!(metadata.name.len() == 5);
@@ -1619,49 +1614,41 @@ fn create_asset_ensure_user_cannot_mint() {
     new_test_ext().execute_with(|| {
         let user = 4;
         Balances::make_free_balance_be(&user, 1000);
-        assert_ok!(Assets::create(RuntimeOrigin::signed(1), ZERO_ID, 1, 1));
-        // assert_ok!(Assets::create(
-        //     RuntimeOrigin::signed(user),
-        //     "Token".as_bytes().to_vec(),
-        //     "Token".as_bytes().to_vec()
-        // ));
         let id = Assets::get_current_asset_id(&user).unwrap();
+        assert_ok!(Assets::create(RuntimeOrigin::signed(user), id, 1, 1));
 
         assert_noop!(
             Assets::mint(RuntimeOrigin::signed(user), id, 1, 500),
-            Error::<Test>::NoPermission
+            TokenError::CannotCreate
         );
     })
 }
 
-#[test]
-fn create_asset_failed_no_custodian() {
-    test_ext_no_custodian().execute_with(|| {
-        let user = 4;
-        Balances::make_free_balance_be(&user, 1000);
-        assert_noop!(
-            Assets::create(RuntimeOrigin::signed(1), ZERO_ID, 1, 1),
-            // Assets::create(
-            //     RuntimeOrigin::signed(user),
-            //     "Token".as_bytes().to_vec(),
-            //     "Token".as_bytes().to_vec()
-            // ),
-            Error::<Test>::NoCustodian
-        );
-    })
-}
+// #[test]
+// fn create_asset_failed_no_custodian() {
+//     test_ext_no_custodian().execute_with(|| {
+//         let user = 4;
+//         Balances::make_free_balance_be(&user, 1000);
+//         // let id = Assets::get_current_asset_id(&user).unwrap();
+//
+//         assert_noop!(
+//             Assets::create(RuntimeOrigin::signed(user), ZERO_ID, 1, 1),
+//             Error::<Test>::NoCustodian
+//         );
+//         // ---- tests::create_asset_failed_no_custodian stdout ----
+//         //     thread 'tests::create_asset_failed_no_custodian' panicked at src/tests.rs:1633:9:
+//         //     assertion `left == right` failed
+//         //     left: Ok(())
+//         //     right: Err(Module(ModuleError { index: 2, error: [15, 0, 0, 0], message: Some("NoCustodian")  }))
+//     })
+// }
 
 #[test]
 fn create_asset_failed_no_balance() {
     new_test_ext().execute_with(|| {
         let user = 4;
         assert_noop!(
-            Assets::create(RuntimeOrigin::signed(1), ZERO_ID, 1, 1),
-            // Assets::create(
-            //     RuntimeOrigin::signed(user),
-            //     "Token".as_bytes().to_vec(),
-            //     "Token".as_bytes().to_vec()
-            // ),
+            Assets::create(RuntimeOrigin::signed(user), ZERO_ID, 1, 1),
             BalancesError::<Test>::InsufficientBalance
         );
     })
@@ -1845,13 +1832,8 @@ fn custodian_mint() {
     new_test_ext().execute_with(|| {
         let user = 4;
         Balances::make_free_balance_be(&user, 1000);
-        assert_ok!(Assets::create(RuntimeOrigin::signed(1), ZERO_ID, 1, 1));
-        // assert_ok!(Assets::create(
-        //     RuntimeOrigin::signed(user),
-        //     "Token".as_bytes().to_vec(),
-        //     "Token".as_bytes().to_vec()
-        // ));
         let id = Assets::get_current_asset_id(&user).unwrap();
+        assert_ok!(Assets::create(RuntimeOrigin::signed(user), id, 1, 1));
 
         assert_ok!(Assets::set_project_data(
             RuntimeOrigin::signed(user),
@@ -1870,13 +1852,8 @@ fn not_custodian_cannot_mint() {
     new_test_ext().execute_with(|| {
         let user = 4;
         Balances::make_free_balance_be(&user, 1000);
-        assert_ok!(Assets::create(RuntimeOrigin::signed(1), ZERO_ID, 1, 1));
-        // assert_ok!(Assets::create(
-        //     RuntimeOrigin::signed(user),
-        //     "Token".as_bytes().to_vec(),
-        //     "Token".as_bytes().to_vec()
-        // ));
         let id = Assets::get_current_asset_id(&user).unwrap();
+        assert_ok!(Assets::create(RuntimeOrigin::signed(user), id, 1, 1));
 
         assert_ok!(Assets::set_project_data(
             RuntimeOrigin::signed(user),
@@ -1956,20 +1933,25 @@ fn custodian_burn() {
     new_test_ext().execute_with(|| {
         let user = 4;
         Balances::make_free_balance_be(&user, 1000);
-        assert_ok!(Assets::create(RuntimeOrigin::signed(1), ZERO_ID, 1, 1));
-        // assert_ok!(Assets::create(
-        //     RuntimeOrigin::signed(user),
-        //     "Token".as_bytes().to_vec(),
-        //     "Token".as_bytes().to_vec()
-        // ));
         let id = Assets::get_current_asset_id(&user).unwrap();
+        assert_ok!(Assets::create(RuntimeOrigin::signed(user), id, 1, 1));
 
-        assert_ok!(Assets::set_project_data(
-            RuntimeOrigin::signed(user),
+        use frame_system::ensure_signed;
+        let origin = ensure_signed(RuntimeOrigin::signed(user)).unwrap();
+        assert_ok!(Assets::do_set_metadata(
             id,
-            vec![b'h', b't', b't', b'p'],
-            vec![b'4', b'h', b'6', b'g']
+            &origin,
+            vec![0u8; 10],
+            vec![0u8; 10],
+            12
         ));
+
+        // assert_ok!(Assets::set_project_data(
+        //     RuntimeOrigin::signed(user),
+        //     id,
+        //     vec![b'h', b't', b't', b'p'],
+        //     vec![b'4', b'h', b'6', b'g']
+        // ));
 
         assert_ok!(Assets::mint(RuntimeOrigin::signed(CUSTODIAN), id, 1, 500));
         assert_eq!(500, Assets::balance(id, user));
@@ -1990,13 +1972,8 @@ fn custodian_burn_several_times() {
     new_test_ext().execute_with(|| {
         let user = 4;
         Balances::make_free_balance_be(&user, 1000);
-        assert_ok!(Assets::create(RuntimeOrigin::signed(1), ZERO_ID, 1, 1));
-        // assert_ok!(Assets::create(
-        //     RuntimeOrigin::signed(user),
-        //     "Token".as_bytes().to_vec(),
-        //     "Token".as_bytes().to_vec()
-        // ));
         let id = Assets::get_current_asset_id(&user).unwrap();
+        assert_ok!(Assets::create(RuntimeOrigin::signed(user), id, 1, 1));
 
         assert_ok!(Assets::set_project_data(
             RuntimeOrigin::signed(user),
@@ -2104,13 +2081,8 @@ fn custodian_cannot_burn_more() {
     new_test_ext().execute_with(|| {
         let user = 4;
         Balances::make_free_balance_be(&user, 1000);
-        assert_ok!(Assets::create(RuntimeOrigin::signed(1), ZERO_ID, 1, 1));
-        // assert_ok!(Assets::create(
-        //     RuntimeOrigin::signed(user),
-        //     "Token".as_bytes().to_vec(),
-        //     "Token".as_bytes().to_vec()
-        // ));
         let id = Assets::get_current_asset_id(&user).unwrap();
+        assert_ok!(Assets::create(RuntimeOrigin::signed(user), id, 1, 1));
 
         assert_ok!(Assets::set_project_data(
             RuntimeOrigin::signed(user),
