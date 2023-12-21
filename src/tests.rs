@@ -1595,7 +1595,19 @@ fn create_asset_with_generated_name() {
         assert_ok!(Assets::create(RuntimeOrigin::signed(user), id, 1, 1));
 
         let metadata = Metadata::<Test>::get(id);
+        println!("name ---- {:?}", metadata.name.len());
+        println!("symbol ---- {:?}", metadata.symbol.len());
+        println!("symbol ---- {:?}", metadata.symbol);
+        // ---- AssetMetadata { deposit: 0, url: BoundedVec([], 50),
+        //     data_ipfs: BoundedVec([], 50), name: BoundedVec([], 50), symbol: BoundedVec([], 50),
+        //     decimals: 0, is_frozen: false  }
+
         assert!(metadata.name.len() == 5);
+        // ---- tests::create_asset_with_generated_name stdout ----
+        //     thread 'tests::create_asset_with_generated_name' panicked at src/tests.rs:1598:9:
+        //     assertion failed: metadata.name.len() == 5
+        //     note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
         assert!(metadata.symbol.len() == 5);
         assert_eq!(metadata.deposit, 11);
         let aseet_details = Asset::<Test>::get(id).unwrap();
@@ -1955,6 +1967,14 @@ fn custodian_burn() {
 
         assert_ok!(Assets::mint(RuntimeOrigin::signed(CUSTODIAN), id, 1, 500));
         assert_eq!(500, Assets::balance(id, user));
+
+        // ---- tests::custodian_burn stdout ----
+        //     thread 'tests::custodian_burn' panicked at src/tests.rs:1956:9:
+        //     Expected Ok(_). Got Err(
+        //         Token(
+        //                     CannotCreate,
+        //         ),
+        //     )
 
         assert_ok!(Assets::burn(
             RuntimeOrigin::signed(CUSTODIAN),
