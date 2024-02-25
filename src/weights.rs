@@ -52,11 +52,6 @@ use core::marker::PhantomData;
 
 /// Weight functions needed for pallet_assets.
 pub trait WeightInfo {
-	// added:
-	fn set_custodian() -> Weight;
-	fn set_project_data() -> Weight;
-	fn destroy(c: u32, s: u32, a: u32, ) -> Weight;
-	// frame/assets:
 	fn create() -> Weight;
 	fn force_create() -> Weight;
 	fn start_destroy() -> Weight;
@@ -94,33 +89,6 @@ pub trait WeightInfo {
 /// Weights for pallet_assets using the Substrate node and recommended hardware.
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
-	fn set_custodian() -> Weight {
-		Weight::from_parts(31_977_000 as u64, 0)
-			.saturating_add(T::DbWeight::get().reads(1 as u64))
-			.saturating_add(T::DbWeight::get().writes(1 as u64))
-	}
-	fn set_project_data() -> Weight {
-		Weight::from_parts(27_805_000 as u64, 0)
-			.saturating_add(T::DbWeight::get().reads(2 as u64))
-			.saturating_add(T::DbWeight::get().writes(1 as u64))
-	}
-	fn destroy(c: u32, s: u32, a: u32, ) -> Weight {
-		Weight::from_parts(0 as u64, 0)
-			// Standard Error: 36_000
-			.saturating_add(Weight::from_parts(15_327_000 as u64, 0).saturating_mul(c as u64))
-			// Standard Error: 36_000
-			.saturating_add(Weight::from_parts(17_817_000 as u64, 0).saturating_mul(s as u64))
-			// Standard Error: 362_000
-			.saturating_add(Weight::from_parts(16_692_000 as u64, 0).saturating_mul(a as u64))
-			.saturating_add(T::DbWeight::get().reads(5 as u64))
-			.saturating_add(T::DbWeight::get().reads((2 as u64).saturating_mul(c as u64)))
-			.saturating_add(T::DbWeight::get().reads((2 as u64).saturating_mul(s as u64)))
-			.saturating_add(T::DbWeight::get().reads((1 as u64).saturating_mul(a as u64)))
-			.saturating_add(T::DbWeight::get().writes(2 as u64))
-			.saturating_add(T::DbWeight::get().writes((2 as u64).saturating_mul(c as u64)))
-			.saturating_add(T::DbWeight::get().writes((2 as u64).saturating_mul(s as u64)))
-			.saturating_add(T::DbWeight::get().writes((1 as u64).saturating_mul(a as u64)))
-	}
 	/// Storage: Assets Asset (r:1 w:1)
 	/// Proof: Assets Asset (max_values: None, max_size: Some(210), added: 2685, mode: MaxEncodedLen)
 	/// Storage: System Account (r:1 w:1)
@@ -561,33 +529,6 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
-	fn set_custodian() -> Weight {
-		Weight::from_parts(23_081_000 as u64, 0)
-			.saturating_add(RocksDbWeight::get().reads(1 as u64))
-			.saturating_add(RocksDbWeight::get().writes(1 as u64))
-	}
-	fn set_project_data() -> Weight {
-		Weight::from_parts(27_805_000 as u64, 0)
-			.saturating_add(RocksDbWeight::get().reads(2 as u64))
-			.saturating_add(RocksDbWeight::get().writes(1 as u64))
-	}
-	fn destroy(c: u32, s: u32, a: u32, ) -> Weight {
-		Weight::from_parts(0 as u64, 0)
-			// Standard Error: 36_000
-			.saturating_add(Weight::from_parts(15_327_000 as u64, 0).saturating_mul(c as u64))
-			// Standard Error: 36_000
-			.saturating_add(Weight::from_parts(17_817_000 as u64, 0).saturating_mul(s as u64))
-			// Standard Error: 362_000
-			.saturating_add(Weight::from_parts(16_692_000 as u64, 0).saturating_mul(a as u64))
-			.saturating_add(RocksDbWeight::get().reads(5 as u64))
-			.saturating_add(RocksDbWeight::get().reads((2 as u64).saturating_mul(c as u64)))
-			.saturating_add(RocksDbWeight::get().reads((2 as u64).saturating_mul(s as u64)))
-			.saturating_add(RocksDbWeight::get().reads((1 as u64).saturating_mul(a as u64)))
-			.saturating_add(RocksDbWeight::get().writes(2 as u64))
-			.saturating_add(RocksDbWeight::get().writes((2 as u64).saturating_mul(c as u64)))
-			.saturating_add(RocksDbWeight::get().writes((2 as u64).saturating_mul(s as u64)))
-			.saturating_add(RocksDbWeight::get().writes((1 as u64).saturating_mul(a as u64)))
-	}
 	/// Storage: Assets Asset (r:1 w:1)
 	/// Proof: Assets Asset (max_values: None, max_size: Some(210), added: 2685, mode: MaxEncodedLen)
 	/// Storage: System Account (r:1 w:1)
