@@ -77,6 +77,16 @@ pub struct AssetDetails<Balance, AccountId, DepositBalance> {
     pub(super) status: AssetStatus,
 }
 
+impl<Balance, AccountId, DepositBalance> AssetDetails<Balance, AccountId, DepositBalance> {
+    pub fn destroy_witness(&self) -> DestroyWitness {
+        DestroyWitness {
+            accounts: self.accounts,
+            sufficients: self.sufficients,
+            approvals: self.approvals,
+        }
+    }
+}
+
 /// Data concerning an approval.
 #[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default, MaxEncodedLen, TypeInfo)]
 pub struct Approval<Balance, DepositBalance> {
@@ -193,6 +203,10 @@ pub struct AssetMetadata<DepositBalance, BoundedString> {
     ///
     /// This pays for the data stored in this struct.
     pub(super) deposit: DepositBalance,
+    /// Url for IPFS
+    pub(super) url: BoundedString,
+    /// Hash link for project data and serial number on IPFS storage
+    pub(super) data_ipfs: BoundedString,
     /// The user friendly name of this asset. Limited in length by `StringLimit`.
     pub(super) name: BoundedString,
     /// The ticker symbol for this asset. Limited in length by `StringLimit`.
@@ -201,6 +215,20 @@ pub struct AssetMetadata<DepositBalance, BoundedString> {
     pub(super) decimals: u8,
     /// Whether the asset metadata may be changed by a non Force origin.
     pub(super) is_frozen: bool,
+}
+
+/// Witness data for the destroy transactions.
+#[derive(Copy, Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
+pub struct DestroyWitness {
+    /// The number of accounts holding the asset.
+    #[codec(compact)]
+    pub(super) accounts: u32,
+    /// The number of accounts holding the asset with a self-sufficient reference.
+    #[codec(compact)]
+    pub(super) sufficients: u32,
+    /// The number of transfer-approvals of the asset.
+    #[codec(compact)]
+    pub(super) approvals: u32,
 }
 
 /// Trait for allowing a minimum balance on the account to be specified, beyond the
