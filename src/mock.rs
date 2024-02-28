@@ -30,6 +30,8 @@ use sp_runtime::BuildStorage;
 
 type Block = frame_system::mocking::MockBlock<Test>;
 
+pub const CUSTODIAN: u64 = 1;
+
 construct_runtime!(
     pub enum Test
     {
@@ -46,7 +48,8 @@ type AssetId = u32;
 impl frame_system::Config for Test {
     type Block = Block;
     type AccountData = pallet_balances::AccountData<u64>;
-    type MaxConsumers = ConstU32<3>;
+    type MaxConsumers = ConstU32<2>;
+    type BlockHashCount = ConstU64<250>;
 }
 
 impl pallet_balances::Config for Test {
@@ -126,6 +129,7 @@ impl Config for Test {
     type WeightInfo = ();
     type CallbackHandle = AssetsCallbackHandle;
     type Extra = ();
+    type Randomness = TestRandomness<Self>;
     type RemoveItemsLimit = ConstU32<5>;
     #[cfg(feature = "runtime-benchmarks")]
     type BenchmarkHelper = ();
@@ -182,6 +186,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
         .unwrap();
 
     let config: pallet_assets::GenesisConfig<Test> = pallet_assets::GenesisConfig {
+        custodian: Some(CUSTODIAN),
         assets: vec![
             // id, owner, is_sufficient, min_balance
             (999, 0, true, 1),
