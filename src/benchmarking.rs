@@ -139,6 +139,47 @@ fn assert_event<T: Config<I>, I: 'static>(generic_event: <T as Config<I>>::Runti
 }
 
 benchmarks_instance_pallet! {
+    set_custodian {
+        let custodian: T::AccountId = whitelisted_caller();
+        T::Currency::make_free_balance_be(&custodian, DepositBalanceOf::<T, I>::max_value());
+    }: _(SystemOrigin::Root, custodian.clone())
+    verify {
+        assert_last_event::<T, I>(Event::CustodianSet { custodian }.into());
+    }
+
+    set_project_data {
+        let caller: T::AccountId = whitelisted_caller();
+        T::Currency::make_free_balance_be(&caller, DepositBalanceOf::<T, I>::max_value());
+        let name = "Token".as_bytes().to_vec();
+        let symbol = "Token".as_bytes().to_vec();
+        let url = vec![0u8; T::StringLimit::get() as usize];
+        let data_ipfs = vec![0u8; T::StringLimit::get() as usize];
+
+        Assets::<T, I>::create(SystemOrigin::Signed(caller.clone()).into(), name, symbol)?;
+        let id = Assets::<T, I>::get_current_asset_id(&caller).unwrap();
+    }: _(SystemOrigin::Signed(caller.clone()), id, url.clone(), data_ipfs.clone())
+    verify {
+        assert_last_event::<T, I>(Event::MetadataUpdated {
+            asset_id: id,
+            url,
+            data_ipfs,
+        }.into());
+    }
+
+    destroy {
+        let c in 0 .. 5_000;
+        let s in 0 .. 5_000;
+        let a in 0 .. 5_00;
+        let (caller, _) = create_default_asset::<T, I>(true);
+        add_consumers::<T, I>(caller.clone(), c);
+        add_sufficients::<T, I>(caller.clone(), s);
+        add_approvals::<T, I>(caller.clone(), a);
+        let witness = Asset::<T, I>::get(AssetId::default()).unwrap().destroy_witness();
+    }: _(SystemOrigin::Signed(caller), Default::default(), witness)
+    verify {
+        assert_last_event::<T, I>(Event::Destroyed { asset_id: Default::default() }.into());
+    }
+
     create {
         let asset_id = default_asset_id::<T, I>();
         let origin = T::CreateOrigin::try_successful_origin(&asset_id.clone().into())
