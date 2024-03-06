@@ -1050,6 +1050,16 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
             .clone()
             .try_into()
             .map_err(|_| Error::<T, I>::BadMetadata)?;
+        let bounded_url: BoundedVec<u8, T::StringLimit> = ""
+            .as_bytes()
+            .to_vec()
+            .try_into()
+            .map_err(|_| Error::<T, I>::BadMetadata)?;
+        let bounded_data_ipfs: BoundedVec<u8, T::StringLimit> =
+            "".as_bytes()
+                .to_vec()
+                .try_into()
+                .map_err(|_| Error::<T, I>::BadMetadata)?;
 
         let d = Asset::<T, I>::get(&id).ok_or(Error::<T, I>::Unknown)?;
         ensure!(d.status == AssetStatus::Live, Error::<T, I>::AssetNotLive);
@@ -1072,6 +1082,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
             *metadata = Some(AssetMetadata {
                 deposit: new_deposit,
+                url: bounded_url,
+                data_ipfs: bounded_data_ipfs,
                 name: bounded_name,
                 symbol: bounded_symbol,
                 decimals,

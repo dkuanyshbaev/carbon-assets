@@ -41,6 +41,8 @@ construct_runtime!(
     }
 );
 
+impl pallet_randomness_collective_flip::Config for Test {}
+
 type AccountId = u64;
 type AssetId = u32;
 
@@ -129,7 +131,7 @@ impl Config for Test {
     type WeightInfo = ();
     type CallbackHandle = AssetsCallbackHandle;
     type Extra = ();
-    type Randomness = TestRandomness<Self>;
+    type Randomness = RandomnessCollectiveFlip;
     type RemoveItemsLimit = ConstU32<5>;
     #[cfg(feature = "runtime-benchmarks")]
     type BenchmarkHelper = ();
